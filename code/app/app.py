@@ -3,33 +3,61 @@ from PIL import Image
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras.models import load_model  # type: ignore
+from keras.models import load_model
+import random
 
-# Function to load the MC-Dropout model
-def load_mc_dropout_model(model_path="mc_dropout.h5"):
-    print("Loading MC-Dropout model...")
+# Function to load the base model
+def load_base_model(model_path="base_model.keras"):
+    print("Loading Base model...")
     model = load_model(model_path)
-    print("Model loaded.")
+    print("Base model loaded.")
     return model
 
-# Function for MC-Dropout predictions with uncertainty
-def predict_with_uncertainty(f_model, x, n_iter=100):
-    print("Predicting with uncertainty...")
-    result = np.zeros((n_iter,) + f_model(x).shape)
-    for i in range(n_iter):
-        result[i] = f_model(x, training=True)
-    prediction_mean = result.mean(axis=0)
-    prediction_std = result.std(axis=0)
-    prediction_mean_softmax = tf.nn.softmax(prediction_mean).numpy()
-    print("Prediction completed.")
-    return prediction_mean_softmax, prediction_std
+# Function to load the MC-Dropout model
+def load_mc_dropout_model(model_path="dropout_model.keras"):
+    print("Loading MC-Dropout model...")
+    model = load_model(model_path)
+    print("MC-Dropout model loaded.")
+    return model
+
+# Function to load ensemble models
+def load_ensemble_models(model_path_prefix="ensemble_model", ensemble_size=5):
+    print("Loading Ensemble models...")
+    ensemble = []
+    for i in range(ensemble_size):
+        model_path = f"{model_path_prefix}_{i+1}.keras"
+        model = load_model(model_path)
+        ensemble.append(model)
+    print("Ensemble models loaded.")
+    return ensemble
+
+# Prediction functions for each model type
+def predict_with_base_model(model, x):
+    probabilities = model.predict(x)
+    predicted_labels = np.argmax(probabilities, axis=1)
+    confidence = np.max(probabilities, axis=1) * 100  # Convert to percentage
+    return predicted_labels, confidence, probabilities
+
+def predict_with_mc_dropout(model, x, num_samples=100):
+    predictions = np.stack([model(x, training=True) for _ in range(num_samples)])
+    mean_predictions = np.mean(predictions, axis=0)
+    confidence = np.max(mean_predictions, axis=1) * 100  # Convert to percentage
+    predicted_labels = np.argmax(mean_predictions, axis=1)
+    return predicted_labels, confidence, mean_predictions
+
+def predict_with_ensemble(ensemble, x):
+    ensemble_predictions = [model.predict(x) for model in ensemble]
+    mean_predictions = np.mean(ensemble_predictions, axis=0)
+    predicted_labels = np.argmax(mean_predictions, axis=1)
+    confidence = np.max(mean_predictions, axis=1) * 100  # Convert to percentage
+    return predicted_labels, confidence, mean_predictions
 
 # Function to plot probabilities as a bar chart
-def plot_probabilities(mean_prediction):
+def plot_probabilities(probabilities):
     import matplotlib.pyplot as plt
     import io
     digits = list(range(10))
-    probabilities = mean_prediction.flatten()
+    probabilities = probabilities.flatten()
     plt.figure(figsize=(6, 4))
     bars = plt.bar(digits, probabilities, color='skyblue')
     plt.xlabel("Digit")
@@ -52,12 +80,16 @@ def plot_probabilities(mean_prediction):
     img = Image.open(buf)
     return img
 
-# Load the Keras model with MC-Dropout
-mc_dropout_model = load_mc_dropout_model("mc_dropout.h5")
+# Load the models
+base_model = load_base_model("base_model.keras")
+mc_dropout_model = load_mc_dropout_model("dropout_model.keras")
+ensemble_models = load_ensemble_models("ensemble_model", ensemble_size=5)
 
 # Dictionary mapping model names to models
 uncertainty_models = {
+    "Base Model": base_model,
     "MC-Dropout": mc_dropout_model,
+    "Ensemble Model": ensemble_models
 }
 
 # Global variables to track the state
@@ -67,16 +99,6 @@ max_draw_per_digit = 2
 digits_drawn = 0  # Total digits drawn
 
 def preprocess_image(img):
-    """
-    Simplified preprocessing: Convert the image to 28x28 grayscale.
-
-    Args:
-        img: The PIL Image to preprocess.
-
-    Returns:
-        img_array: The preprocessed image as a NumPy array suitable for model input.
-        img_resized: The processed PIL Image.
-    """
     print("Preprocessing image...")
     # Convert to grayscale
     img = img.convert('L')
@@ -149,7 +171,7 @@ def process_drawing(
     img.save(original_file_path)
     print(f"Original drawing saved at {original_file_path}")
 
-    # Preprocess the image (simplified)
+    # Preprocess the image
     img_array, img_resized = preprocess_image(img)
 
     # Save the preprocessed image
@@ -158,33 +180,64 @@ def process_drawing(
     img_resized.save(processed_file_path)
     print(f"Processed drawing saved at {processed_file_path}")
 
-    # Select the model
-    model = uncertainty_models["MC-Dropout"]
+    # Randomly select a model
+    model_options = ["Base Model", "MC-Dropout", "Ensemble Model"]
+    selected_model_name = random.choice(model_options)
+    print(f"Selected model: {selected_model_name}")
 
-    # Make prediction with uncertainty
-    prediction_mean_softmax, prediction_std = predict_with_uncertainty(model, img_array)
-    predicted_digit = np.argmax(prediction_mean_softmax)
-    confidence = np.max(prediction_mean_softmax) * 100
-    print(f"Predicted Digit: {predicted_digit}, Confidence: {confidence:.2f}%")
+    # Use the selected model for prediction
+    if selected_model_name == "Base Model":
+        model = uncertainty_models["Base Model"]
+        predicted_labels, confidence, probabilities = predict_with_base_model(model, img_array)
+        predicted_digit = predicted_labels[0]
+        confidence_value = confidence[0]
+        probabilities_for_plot = probabilities
+    elif selected_model_name == "MC-Dropout":
+        model = uncertainty_models["MC-Dropout"]
+        predicted_labels, confidence, mean_predictions = predict_with_mc_dropout(model, img_array, num_samples=100)
+        predicted_digit = predicted_labels[0]
+        confidence_value = confidence[0]
+        probabilities_for_plot = mean_predictions
+    elif selected_model_name == "Ensemble Model":
+        ensemble = uncertainty_models["Ensemble Model"]
+        predicted_labels, confidence, mean_predictions = predict_with_ensemble(ensemble, img_array)
+        predicted_digit = predicted_labels[0]
+        confidence_value = confidence[0]
+        probabilities_for_plot = mean_predictions
+    else:
+        print("Unknown model selected.")
+        return (
+            gr.update(),
+            None,
+            None,
+            "Error: Unknown model selected.",
+            None,
+            gr.update(),
+            gr.update(),
+            gr.update()
+        )
+
+    print(f"Predicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%")
 
     # Save prediction and uncertainty
     prediction_file = os.path.join(folder_name, f"prediction_digit_{current_digit}_draw_{draw_count + 1}.txt")
     with open(prediction_file, 'w') as f:
         f.write(f"Intended Digit: {current_digit}\n")
+        f.write(f"Model Used: {selected_model_name}\n")
         f.write(f"Predicted Digit: {predicted_digit}\n")
-        f.write(f"Confidence: {confidence:.2f}%\n")
-        f.write(f"Uncertainty: {prediction_std.max():.4f}\n")
+        f.write(f"Confidence: {confidence_value:.2f}%\n")
         # Feedback will be saved later
+
     print(f"Prediction saved at {prediction_file}")
 
     # Prepare outputs
     prediction_text_output = (
-        f"Predicted Digit: {predicted_digit}, Confidence: {confidence:.2f}%"
-    ) if "Confidence %" in uncertainty_methods else f"Predicted Digit: {predicted_digit}"
+        f"Model Used: {selected_model_name}\nPredicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%"
+    ) if "Confidence %" in uncertainty_methods else f"Model Used: {selected_model_name}\nPredicted Digit: {predicted_digit}"
 
     # Generate the bar plot if "Bar Plot" is selected
     if "Bar Plot" in uncertainty_methods:
-        plot_image = plot_probabilities(prediction_mean_softmax)
+        plot_image = plot_probabilities(probabilities_for_plot)
     else:
         plot_image = None
 
@@ -319,7 +372,7 @@ with gr.Blocks() as demo:
         original_drawing_display = gr.Image(label="Your Drawing")  # Display original drawing
         processed_drawing_display = gr.Image(label="Processed Drawing (28x28)")  # Display processed image
         prediction_text = gr.Textbox(label="Prediction", interactive=False)
-        probabilities_plot = gr.Image(label="Prediction Probabilities")  # Added back
+        probabilities_plot = gr.Image(label="Prediction Probabilities")
         feedback_text = gr.Textbox(label="Feedback on the Prediction", placeholder="Enter your feedback here...", interactive=False)
         next_digit_button = gr.Button("Next Digit", interactive=False)
 
