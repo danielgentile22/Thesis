@@ -5,8 +5,8 @@ models = keras.models
 import numpy as np
 
 # Configuration variables for save paths
-MODEL_SAVE_PATH = "../../trained_models/mc_dropout_model.keras"         # Path to save the trained model
-RESULTS_FILE_PATH = "../../trained_models/results/mc_dropout_results.txt"  # Path to save training and evaluation results
+MODEL_SAVE_PATH = "../../trained_models/dropout_model.keras"         # Path to save the trained model
+RESULTS_FILE_PATH = "../../trained_models/results/dropout_results.txt"  # Path to save training and evaluation results
 
 # Build a CNN model with MC Dropout
 def build_model():

@@ -5,8 +5,8 @@ models = keras.models
 import numpy as np
 
 # Configuration variables for save paths
-MODEL_SAVE_PATH = "../../trained_models/deep_ensemble_base_model"  # Folder to save ensemble models
-RESULTS_FILE_PATH = "../../trained_models/results/deep_ensemble_results.txt"  # Path to save training and evaluation results
+MODEL_SAVE_PATH = "../../trained_models/ensemble_model"  # Folder to save ensemble models
+RESULTS_FILE_PATH = "../../trained_models/results/ensemble_results.txt"  # Path to save training and evaluation results
 
 # Number of models in the ensemble
 ENSEMBLE_SIZE = 5
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         test_accuracies.append(test_accuracy)
         
         # Save each model in the ensemble
-        model.save(f"{MODEL_SAVE_PATH}_model_{i+1}.keras")
+        model.save(f"{MODEL_SAVE_PATH}_{i+1}.keras")
     
     # Predict with ensemble on a sample of test data
     predictions, confidence = predict_with_ensemble(ensemble, x_test[:10])
