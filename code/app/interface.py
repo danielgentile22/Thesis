@@ -14,7 +14,7 @@ from models import (
     predict_with_ensemble,
 )
 from utils import preprocess_image, plot_probabilities
-from config import BASE_RESULTS_DIR, MAX_DRAW_PER_DIGIT
+from config import BASE_RESULTS_DIR, MAX_DRAW_PER_DIGIT, TOTAL_DIGITS
 
 # Load the models
 base_model = load_base_model()
@@ -28,77 +28,18 @@ uncertainty_models = {
     "Ensemble Model": ensemble_models
 }
 
-# Global variables to track the state
-current_digit = 0
-draw_count = 0
-digits_drawn = 0  # Total digits drawn
+# Global variables to track the experiment state
+digits_to_draw = []
+current_index = 0
 
-def process_drawing(
-    drawing,
-    subject_num,
-    uncertainty_methods,
-    model_selection_mode
-):
-    global current_digit, draw_count, MAX_DRAW_PER_DIGIT, digits_drawn
-
-    print("Processing drawing...")
-
-    # Create directories for saving results
-    subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
-    digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
-    draw_folder = os.path.join(digit_folder, f"draw_{draw_count + 1}")
-    os.makedirs(draw_folder, exist_ok=True)
-
-    # Handle the drawing input
-    img = handle_drawing_input(drawing)
-    if img is None:
-        return generate_error_response("Unsupported image format.")
-
-    # Save the original drawing
-    original_file_path = os.path.join(draw_folder, "original_drawing.png")
-    img.save(original_file_path)
-    print(f"Original drawing saved at {original_file_path}")
-
-    # Preprocess the image
-    img_array, img_resized = preprocess_image(img)
-
-    # Save the preprocessed image
-    processed_file_path = os.path.join(draw_folder, "processed_drawing.png")
-    img_resized.save(processed_file_path)
-    print(f"Processed drawing saved at {processed_file_path}")
-
-    # Prepare outputs
-    original_display = img.resize((200, 200))
-    processed_display = img_resized.resize((200, 200))
-
-    # Initialize variables for predictions
-    prediction_text_output = ""
-    plot_images = []
-
-    # Determine model(s) to use
-    if model_selection_mode == "Randomly pick one model per digit":
-        prediction_text_output, plot_images = process_single_model(
-            img_array, uncertainty_methods, draw_folder
-        )
-    elif model_selection_mode == "Use all models for each digit":
-        prediction_text_output, plot_images = process_all_models(
-            img_array, uncertainty_methods, draw_folder
-        )
-    else:
-        return generate_error_response("Unknown model selection mode.")
-
-    # Enable feedback_text and next_digit_button
-    print("Processing completed.")
-    return (
-        gr.update(),               # Keep drawing as is
-        original_display,          # Display original drawing
-        processed_display,         # Display processed drawing
-        prediction_text_output,    # Update prediction_text
-        plot_images,               # Display probabilities_plot(s)
-        gr.update(),               # instruction_text remains the same
-        gr.update(interactive=True),  # Enable feedback_text
-        gr.update(interactive=True)   # Enable next_digit_button
-    )
+def initialize_experiment_state():
+    """Initialize and shuffle the list of digits to draw."""
+    global digits_to_draw, current_index
+    # Create a list with two instances of each digit (0-9)
+    digits_to_draw = [digit for digit in range(TOTAL_DIGITS) for _ in range(MAX_DRAW_PER_DIGIT)]
+    random.shuffle(digits_to_draw)
+    current_index = 0
+    print(f"Digits to draw (shuffled): {digits_to_draw}")
 
 def handle_drawing_input(drawing):
     """Handle the drawing input from Gradio and return a PIL Image."""
@@ -136,7 +77,84 @@ def generate_error_response(error_message):
         gr.update()
     )
 
-def process_single_model(img_array, uncertainty_methods, draw_folder):
+def process_drawing(
+    drawing,
+    subject_num,
+    uncertainty_methods,
+    model_selection_mode
+):
+    global digits_to_draw, current_index
+
+    if current_index >= len(digits_to_draw):
+        # All digits have been drawn; reset the experiment state
+        print("All digits have been drawn. Experiment completed.")
+        reset_experiment_state()
+        # Hide experiment page and show thank you page
+        return end_experiment_response()
+
+    current_digit = digits_to_draw[current_index]
+    print(f"Processing drawing for digit {current_digit} (Index: {current_index})")
+
+    # Create directories for saving results
+    subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
+    digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
+    os.makedirs(digit_folder, exist_ok=True)
+    draw_number = len([name for name in os.listdir(digit_folder) if os.path.isdir(os.path.join(digit_folder, name))]) + 1
+    draw_folder = os.path.join(digit_folder, f"draw_{draw_number}")
+    os.makedirs(draw_folder, exist_ok=True)
+
+    # Handle the drawing input
+    img = handle_drawing_input(drawing)
+    if img is None:
+        return generate_error_response("Unsupported image format.")
+
+    # Save the original drawing
+    original_file_path = os.path.join(draw_folder, "original_drawing.png")
+    img.save(original_file_path)
+    print(f"Original drawing saved at {original_file_path}")
+
+    # Preprocess the image
+    img_array, img_resized = preprocess_image(img)
+
+    # Save the preprocessed image
+    processed_file_path = os.path.join(draw_folder, "processed_drawing.png")
+    img_resized.save(processed_file_path)
+    print(f"Processed drawing saved at {processed_file_path}")
+
+    # Prepare outputs
+    original_display = img.resize((200, 200))
+    processed_display = img_resized.resize((200, 200))
+
+    # Initialize variables for predictions
+    prediction_text_output = ""
+    plot_images = []
+
+    # Determine model(s) to use
+    if model_selection_mode == "Randomly pick one model per digit":
+        prediction_text_output, plot_images = process_single_model(
+            img_array, uncertainty_methods, draw_folder, current_digit
+        )
+    elif model_selection_mode == "Use all models for each digit":
+        prediction_text_output, plot_images = process_all_models(
+            img_array, uncertainty_methods, draw_folder, current_digit
+        )
+    else:
+        return generate_error_response("Unknown model selection mode.")
+
+    # Enable feedback_text and next_digit_button
+    print("Processing completed.")
+    return (
+        gr.update(),               # Keep drawing as is
+        original_display,          # Display original drawing
+        processed_display,         # Display processed drawing
+        prediction_text_output,    # Update prediction_text
+        plot_images,               # Display probabilities_plot(s)
+        gr.update(),               # instruction_text remains the same
+        gr.update(interactive=True),  # Enable feedback_text
+        gr.update(interactive=True)   # Enable next_digit_button
+    )
+
+def process_single_model(img_array, uncertainty_methods, draw_folder, current_digit):
     """Process the drawing using a single randomly selected model."""
     model_options = ["Base Model", "MC-Dropout", "Ensemble Model"]
     selected_model_name = random.choice(model_options)
@@ -162,7 +180,7 @@ def process_single_model(img_array, uncertainty_methods, draw_folder):
 
     return prediction_text_output, plot_images
 
-def process_all_models(img_array, uncertainty_methods, draw_folder):
+def process_all_models(img_array, uncertainty_methods, draw_folder, current_digit):
     """Process the drawing using all available models."""
     models_to_use = ["Base Model", "MC-Dropout", "Ensemble Model"]
     prediction_text_output_list = []
@@ -242,52 +260,57 @@ def generate_plots(probabilities, model_name, uncertainty_methods, draw_folder):
 
 def submit_feedback(feedback, subject_num):
     """Handle feedback submission and update the experiment state."""
-    global current_digit, draw_count, MAX_DRAW_PER_DIGIT, digits_drawn
+    global digits_to_draw, current_index
 
-    print("Submitting feedback...")
+    current_digit = digits_to_draw[current_index]
+    print(f"Submitting feedback for digit {current_digit} (Index: {current_index})")
 
     # Locate the prediction file
     prediction_file = os.path.join(
         BASE_RESULTS_DIR,
         f"Subject_{subject_num}",
         f"digit_{current_digit}",
-        f"draw_{draw_count + 1}",
+        f"draw_*",
         "prediction.txt"
     )
+    # Since draw_folder includes draw number, we need to find the latest one
+    digit_folder = os.path.join(
+        BASE_RESULTS_DIR,
+        f"Subject_{subject_num}",
+        f"digit_{current_digit}"
+    )
+    draw_folders = sorted([d for d in os.listdir(digit_folder) if d.startswith("draw_")])
+    if draw_folders:
+        last_draw_folder = draw_folders[-1]
+        prediction_file = os.path.join(digit_folder, last_draw_folder, "prediction.txt")
+    else:
+        print("No prediction file found.")
+        return generate_error_response("No prediction file found.")
 
     # Append feedback to prediction file
     with open(prediction_file, 'a') as f:
         f.write(f"Feedback: {feedback}\n")
     print(f"Feedback saved to {prediction_file}")
 
-    # Update draw count and digit logic
-    draw_count += 1
-    digits_drawn += 1
-    print(f"Draw count: {draw_count}, Digits drawn: {digits_drawn}")
-    if draw_count == MAX_DRAW_PER_DIGIT:
-        current_digit += 1
-        draw_count = 0
-        print(f"Moving to next digit: {current_digit}")
+    # Move to the next digit
+    current_index += 1
 
-    # Check if all digits have been drawn twice
-    if digits_drawn == MAX_DRAW_PER_DIGIT * 10:
-        # Reset variables
-        print("All digits have been drawn twice. Experiment completed.")
+    if current_index >= len(digits_to_draw):
+        # All digits have been drawn; reset the experiment state
+        print("All digits have been drawn. Experiment completed.")
         reset_experiment_state()
         # Hide experiment page and show thank you page
         return end_experiment_response()
 
     # Prepare for next digit
-    instruction = f"Please draw the digit {current_digit}"
+    next_digit = digits_to_draw[current_index]
+    instruction = f"Please draw the digit {next_digit}"
     print(f"Instruction updated: {instruction}")
     return continue_experiment_response(instruction)
 
 def reset_experiment_state():
     """Reset the global experiment state."""
-    global current_digit, draw_count, digits_drawn
-    current_digit = 0
-    draw_count = 0
-    digits_drawn = 0
+    initialize_experiment_state()
 
 def end_experiment_response():
     """Generate the response to end the experiment."""
@@ -335,8 +358,11 @@ def home_page(subject_num, uncertainty_methods, model_selection_mode):
 
 def consent_page(agree):
     """Handle the consent page logic."""
-    print("Consent page response received.")
+    global current_index
+
     if agree:
+        initialize_experiment_state()
+        current_digit = digits_to_draw[current_index]
         instruction = f"Please draw the digit {current_digit}"
         print("Consent given. Starting experiment.")
         return (

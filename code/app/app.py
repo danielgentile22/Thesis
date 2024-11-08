@@ -16,7 +16,11 @@ with gr.Blocks() as demo:
     # Home Page
     with gr.Column(visible=True) as home_page_container:
         subject_num = gr.Textbox(label="Subject Number")
-        uncertainty_methods = gr.CheckboxGroup(choices=["Confidence %", "Bar Plot"], label="Select Uncertainty Methods")
+        uncertainty_methods = gr.CheckboxGroup(
+            choices=["Confidence %", "Bar Plot"],
+            label="Select Uncertainty Methods",
+            value=["Confidence %", "Bar Plot"]  # Default to both options selected
+        )
         model_selection_mode = gr.Radio(
             choices=["Randomly pick one model per digit", "Use all models for each digit"],
             label="Model Selection Mode",
@@ -39,7 +43,11 @@ with gr.Blocks() as demo:
         processed_drawing_display = gr.Image(label="Processed Drawing (28x28)")  # Display processed image
         prediction_text = gr.Textbox(label="Prediction", interactive=False)
         probabilities_plot = gr.Gallery(label="Prediction Probabilities")
-        feedback_text = gr.Textbox(label="Feedback on the Prediction", placeholder="Enter your feedback here...", interactive=False)
+        feedback_text = gr.Textbox(
+            label="Feedback on the Prediction",
+            placeholder="Enter your feedback here...",
+            interactive=False
+        )
         next_digit_button = gr.Button("Next Digit", interactive=False)
 
     # Thank You Page
@@ -50,47 +58,64 @@ with gr.Blocks() as demo:
     proceed_button.click(
         home_page,
         inputs=[subject_num, uncertainty_methods, model_selection_mode],
-        outputs=[home_page_container, consent_page_container, experiment_page_container, thank_you_page_container]
+        outputs=[
+            home_page_container,
+            consent_page_container,
+            experiment_page_container,
+            thank_you_page_container
+        ]
     )
 
     # Consent Page Button Click
     start_experiment_button.click(
         consent_page,
         inputs=[agree_checkbox],
-        outputs=[consent_page_container, experiment_page_container, instruction_text]
+        outputs=[
+            consent_page_container,
+            experiment_page_container,
+            instruction_text
+        ]
     )
 
     # Submit Drawing Button Click
     submit_drawing_button.click(
         process_drawing,
-        inputs=[drawing, subject_num, uncertainty_methods, model_selection_mode],
+        inputs=[
+            drawing,
+            subject_num,
+            uncertainty_methods,
+            model_selection_mode
+        ],
         outputs=[
-            drawing,                  # Keep drawing as is
-            original_drawing_display, # Display original drawing
-            processed_drawing_display,# Display processed drawing
-            prediction_text,          # Update prediction_text
-            probabilities_plot,       # Display probabilities_plot(s)
-            instruction_text,         # Keep instruction_text
-            feedback_text,            # Enable feedback_text
-            next_digit_button         # Enable next_digit_button
+            drawing,                   # Keep drawing as is
+            original_drawing_display,  # Display original drawing
+            processed_drawing_display, # Display processed drawing
+            prediction_text,           # Update prediction_text
+            probabilities_plot,        # Display probabilities_plot(s)
+            instruction_text,          # Keep instruction_text
+            feedback_text,             # Enable feedback_text
+            next_digit_button          # Enable next_digit_button
         ]
     )
 
     # Next Digit Button Click
     next_digit_button.click(
         submit_feedback,
-        inputs=[feedback_text, subject_num],
+        inputs=[
+            feedback_text,
+            subject_num
+        ],
         outputs=[
-            drawing,                   # Clear drawing
-            original_drawing_display,  # Clear original drawing display
-            processed_drawing_display, # Clear processed drawing display
-            prediction_text,           # Clear prediction_text
-            probabilities_plot,        # Clear probabilities_plot
-            instruction_text,          # Update instruction_text
-            feedback_text,             # Clear and disable feedback_text
-            next_digit_button,         # Disable next_digit_button
-            experiment_page_container, # Show/hide experiment page
-            thank_you_page_container   # Show/hide thank you page
+            drawing,                    # Clear drawing
+            original_drawing_display,   # Clear original drawing display
+            processed_drawing_display,  # Clear processed drawing display
+            prediction_text,            # Clear prediction_text
+            probabilities_plot,         # Clear probabilities_plot
+            instruction_text,           # Update instruction_text
+            feedback_text,              # Clear and disable feedback_text
+            next_digit_button,          # Disable next_digit_button
+            experiment_page_container,  # Show/hide experiment page
+            thank_you_page_container    # Show/hide thank you page
         ]
     )
 
