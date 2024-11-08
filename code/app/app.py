@@ -7,21 +7,21 @@ from keras.models import load_model
 import random
 
 # Function to load the base model
-def load_base_model(model_path="base_model.keras"):
+def load_base_model(model_path="../../trained_models/base_model.keras"):
     print("Loading Base model...")
     model = load_model(model_path)
     print("Base model loaded.")
     return model
 
 # Function to load the MC-Dropout model
-def load_mc_dropout_model(model_path="dropout_model.keras"):
+def load_mc_dropout_model(model_path="../../trained_models/dropout_model.keras"):
     print("Loading MC-Dropout model...")
     model = load_model(model_path)
     print("MC-Dropout model loaded.")
     return model
 
 # Function to load ensemble models
-def load_ensemble_models(model_path_prefix="ensemble_model", ensemble_size=5):
+def load_ensemble_models(model_path_prefix="../../trained_models/ensemble_model", ensemble_size=5):
     print("Loading Ensemble models...")
     ensemble = []
     for i in range(ensemble_size):
@@ -53,7 +53,7 @@ def predict_with_ensemble(ensemble, x):
     return predicted_labels, confidence, mean_predictions
 
 # Function to plot probabilities as a bar chart
-def plot_probabilities(probabilities):
+def plot_probabilities(probabilities, model_name):
     import matplotlib.pyplot as plt
     import io
     digits = list(range(10))
@@ -62,7 +62,7 @@ def plot_probabilities(probabilities):
     bars = plt.bar(digits, probabilities, color='skyblue')
     plt.xlabel("Digit")
     plt.ylabel("Probability")
-    plt.title("Prediction Probabilities")
+    plt.title(f"Prediction Probabilities ({model_name})")
     plt.xticks(digits)
     plt.ylim([0, 1])
 
@@ -81,9 +81,9 @@ def plot_probabilities(probabilities):
     return img
 
 # Load the models
-base_model = load_base_model("base_model.keras")
-mc_dropout_model = load_mc_dropout_model("dropout_model.keras")
-ensemble_models = load_ensemble_models("ensemble_model", ensemble_size=5)
+base_model = load_base_model()
+mc_dropout_model = load_mc_dropout_model()
+ensemble_models = load_ensemble_models()
 
 # Dictionary mapping model names to models
 uncertainty_models = {
@@ -113,13 +113,28 @@ def preprocess_image(img):
 def process_drawing(
     drawing,
     subject_num,
-    uncertainty_methods
+    uncertainty_methods,
+    model_selection_mode  # New parameter
 ):
     global current_digit, draw_count, max_draw_per_digit, digits_drawn
 
     print("Processing drawing...")
-    folder_name = f"{subject_num}"
-    os.makedirs(folder_name, exist_ok=True)
+
+    # Create the base directory for experiment results
+    base_results_dir = "../../exp_results/"
+    os.makedirs(base_results_dir, exist_ok=True)
+
+    # Create a folder for the subject
+    subject_folder = os.path.join(base_results_dir, f"Subject_{subject_num}")
+    os.makedirs(subject_folder, exist_ok=True)
+
+    # Create a folder for the current digit
+    digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
+    os.makedirs(digit_folder, exist_ok=True)
+
+    # Create a folder for the current drawing attempt
+    draw_folder = os.path.join(digit_folder, f"draw_{draw_count + 1}")
+    os.makedirs(draw_folder, exist_ok=True)
 
     # Handle the drawing input
     if isinstance(drawing, dict):
@@ -166,8 +181,7 @@ def process_drawing(
         img = img.convert('RGB')
 
     # Save the original drawing
-    original_file_name = f"original_drawing_digit_{current_digit}_draw_{draw_count + 1}.png"
-    original_file_path = os.path.join(folder_name, original_file_name)
+    original_file_path = os.path.join(draw_folder, "original_drawing.png")
     img.save(original_file_path)
     print(f"Original drawing saved at {original_file_path}")
 
@@ -175,75 +189,155 @@ def process_drawing(
     img_array, img_resized = preprocess_image(img)
 
     # Save the preprocessed image
-    processed_file_name = f"processed_drawing_digit_{current_digit}_draw_{draw_count + 1}.png"
-    processed_file_path = os.path.join(folder_name, processed_file_name)
+    processed_file_path = os.path.join(draw_folder, "processed_drawing.png")
     img_resized.save(processed_file_path)
     print(f"Processed drawing saved at {processed_file_path}")
 
-    # Randomly select a model
-    model_options = ["Base Model", "MC-Dropout", "Ensemble Model"]
-    selected_model_name = random.choice(model_options)
-    print(f"Selected model: {selected_model_name}")
+    # Prepare outputs
+    original_display = img.resize((200, 200))
+    processed_display = img_resized.resize((200, 200))
 
-    # Use the selected model for prediction
-    if selected_model_name == "Base Model":
-        model = uncertainty_models["Base Model"]
-        predicted_labels, confidence, probabilities = predict_with_base_model(model, img_array)
-        predicted_digit = predicted_labels[0]
-        confidence_value = confidence[0]
-        probabilities_for_plot = probabilities
-    elif selected_model_name == "MC-Dropout":
-        model = uncertainty_models["MC-Dropout"]
-        predicted_labels, confidence, mean_predictions = predict_with_mc_dropout(model, img_array, num_samples=100)
-        predicted_digit = predicted_labels[0]
-        confidence_value = confidence[0]
-        probabilities_for_plot = mean_predictions
-    elif selected_model_name == "Ensemble Model":
-        ensemble = uncertainty_models["Ensemble Model"]
-        predicted_labels, confidence, mean_predictions = predict_with_ensemble(ensemble, img_array)
-        predicted_digit = predicted_labels[0]
-        confidence_value = confidence[0]
-        probabilities_for_plot = mean_predictions
+    # Initialize variables for predictions
+    prediction_text_output = ""
+    plot_images = []
+
+    # Determine model(s) to use
+    if model_selection_mode == "Randomly pick one model per digit":
+        # Randomly select a model
+        model_options = ["Base Model", "MC-Dropout", "Ensemble Model"]
+        selected_model_name = random.choice(model_options)
+        print(f"Selected model: {selected_model_name}")
+
+        # Use the selected model for prediction
+        if selected_model_name == "Base Model":
+            model = uncertainty_models["Base Model"]
+            predicted_labels, confidence, probabilities = predict_with_base_model(model, img_array)
+            predicted_digit = predicted_labels[0]
+            confidence_value = confidence[0]
+            probabilities_for_plot = probabilities
+        elif selected_model_name == "MC-Dropout":
+            model = uncertainty_models["MC-Dropout"]
+            predicted_labels, confidence, mean_predictions = predict_with_mc_dropout(model, img_array, num_samples=100)
+            predicted_digit = predicted_labels[0]
+            confidence_value = confidence[0]
+            probabilities_for_plot = mean_predictions
+        elif selected_model_name == "Ensemble Model":
+            ensemble = uncertainty_models["Ensemble Model"]
+            predicted_labels, confidence, mean_predictions = predict_with_ensemble(ensemble, img_array)
+            predicted_digit = predicted_labels[0]
+            confidence_value = confidence[0]
+            probabilities_for_plot = mean_predictions
+        else:
+            print("Unknown model selected.")
+            return (
+                gr.update(),
+                None,
+                None,
+                "Error: Unknown model selected.",
+                None,
+                gr.update(),
+                gr.update(),
+                gr.update()
+            )
+
+        print(f"Predicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%")
+
+        # Save prediction and uncertainty
+        prediction_file = os.path.join(draw_folder, "prediction.txt")
+        with open(prediction_file, 'w') as f:
+            f.write(f"Intended Digit: {current_digit}\n")
+            f.write(f"Model Used: {selected_model_name}\n")
+            f.write(f"Predicted Digit: {predicted_digit}\n")
+            f.write(f"Confidence: {confidence_value:.2f}%\n")
+            # Feedback will be saved later
+
+        print(f"Prediction saved at {prediction_file}")
+
+        # Prepare prediction text
+        prediction_text_output = (
+            f"Model Used: {selected_model_name}\nPredicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%"
+        ) if "Confidence %" in uncertainty_methods else f"Model Used: {selected_model_name}\nPredicted Digit: {predicted_digit}"
+
+        # Generate the bar plot if "Bar Plot" is selected
+        if "Bar Plot" in uncertainty_methods:
+            plot_image = plot_probabilities(probabilities_for_plot, selected_model_name)
+            # Save the plot
+            plot_file_path = os.path.join(draw_folder, f"probabilities_plot_{selected_model_name.replace(' ', '_')}.png")
+            plot_image.save(plot_file_path)
+            print(f"Probabilities plot saved at {plot_file_path}")
+            plot_images = [plot_image]  # Wrap in a list for the gallery
+        else:
+            plot_images = []
+
+    elif model_selection_mode == "Use all models for each digit":
+        print("Using all models for prediction.")
+        models_to_use = ["Base Model", "MC-Dropout", "Ensemble Model"]
+        prediction_text_output_list = []
+
+        # Prepare prediction file
+        prediction_file = os.path.join(draw_folder, "prediction.txt")
+        with open(prediction_file, 'w') as f:
+            f.write(f"Intended Digit: {current_digit}\n")
+            f.write(f"Models Used: All Models\n")
+
+            for model_name in models_to_use:
+                print(f"Processing with {model_name}")
+                if model_name == "Base Model":
+                    model = uncertainty_models["Base Model"]
+                    predicted_labels, confidence, probabilities = predict_with_base_model(model, img_array)
+                    predicted_digit = predicted_labels[0]
+                    confidence_value = confidence[0]
+                    probabilities_for_plot = probabilities
+                elif model_name == "MC-Dropout":
+                    model = uncertainty_models["MC-Dropout"]
+                    predicted_labels, confidence, mean_predictions = predict_with_mc_dropout(model, img_array, num_samples=100)
+                    predicted_digit = predicted_labels[0]
+                    confidence_value = confidence[0]
+                    probabilities_for_plot = mean_predictions
+                elif model_name == "Ensemble Model":
+                    ensemble = uncertainty_models["Ensemble Model"]
+                    predicted_labels, confidence, mean_predictions = predict_with_ensemble(ensemble, img_array)
+                    predicted_digit = predicted_labels[0]
+                    confidence_value = confidence[0]
+                    probabilities_for_plot = mean_predictions
+                else:
+                    continue
+
+                # Append to prediction text
+                prediction_text = (
+                    f"{model_name} - Predicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%"
+                ) if "Confidence %" in uncertainty_methods else f"{model_name} - Predicted Digit: {predicted_digit}"
+                prediction_text_output_list.append(prediction_text)
+
+                # Save to prediction file
+                f.write(f"\n{model_name}:\n")
+                f.write(f"Predicted Digit: {predicted_digit}\n")
+                f.write(f"Confidence: {confidence_value:.2f}%\n")
+
+                # Generate bar plot if selected
+                if "Bar Plot" in uncertainty_methods:
+                    plot_image = plot_probabilities(probabilities_for_plot, model_name)
+                    # Save the plot
+                    plot_file_path = os.path.join(draw_folder, f"probabilities_plot_{model_name.replace(' ', '_')}.png")
+                    plot_image.save(plot_file_path)
+                    print(f"Probabilities plot for {model_name} saved at {plot_file_path}")
+                    plot_images.append(plot_image)
+
+        # Combine prediction texts
+        prediction_text_output = "\n\n".join(prediction_text_output_list)
+
     else:
-        print("Unknown model selected.")
+        print("Unknown model selection mode.")
         return (
             gr.update(),
             None,
             None,
-            "Error: Unknown model selected.",
+            "Error: Unknown model selection mode.",
             None,
             gr.update(),
             gr.update(),
             gr.update()
         )
-
-    print(f"Predicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%")
-
-    # Save prediction and uncertainty
-    prediction_file = os.path.join(folder_name, f"prediction_digit_{current_digit}_draw_{draw_count + 1}.txt")
-    with open(prediction_file, 'w') as f:
-        f.write(f"Intended Digit: {current_digit}\n")
-        f.write(f"Model Used: {selected_model_name}\n")
-        f.write(f"Predicted Digit: {predicted_digit}\n")
-        f.write(f"Confidence: {confidence_value:.2f}%\n")
-        # Feedback will be saved later
-
-    print(f"Prediction saved at {prediction_file}")
-
-    # Prepare outputs
-    prediction_text_output = (
-        f"Model Used: {selected_model_name}\nPredicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%"
-    ) if "Confidence %" in uncertainty_methods else f"Model Used: {selected_model_name}\nPredicted Digit: {predicted_digit}"
-
-    # Generate the bar plot if "Bar Plot" is selected
-    if "Bar Plot" in uncertainty_methods:
-        plot_image = plot_probabilities(probabilities_for_plot)
-    else:
-        plot_image = None
-
-    # Prepare images for display
-    original_display = img.resize((200, 200))
-    processed_display = img_resized.resize((200, 200))
 
     # Enable feedback_text and next_digit_button
     print("Processing completed.")
@@ -252,7 +346,7 @@ def process_drawing(
         original_display,          # Display original drawing
         processed_display,         # Display processed drawing
         prediction_text_output,    # Update prediction_text
-        plot_image,                # Display probabilities_plot
+        plot_images,               # Display probabilities_plot(s)
         gr.update(),               # instruction_text remains the same
         gr.update(interactive=True),  # Enable feedback_text
         gr.update(interactive=True)   # Enable next_digit_button
@@ -265,12 +359,18 @@ def submit_feedback(
     global current_digit, draw_count, max_draw_per_digit, digits_drawn
 
     print("Submitting feedback...")
-    folder_name = f"{subject_num}"
+
+    # Locate the prediction file
+    base_results_dir = "../../exp_results/"
+    prediction_file = os.path.join(
+        base_results_dir,
+        f"Subject_{subject_num}",
+        f"digit_{current_digit}",
+        f"draw_{draw_count + 1}",
+        "prediction.txt"
+    )
 
     # Append feedback to prediction file
-    prediction_file = os.path.join(
-        folder_name, f"prediction_digit_{current_digit}_draw_{draw_count + 1}.txt"
-    )
     with open(prediction_file, 'a') as f:
         f.write(f"Feedback: {feedback}\n")
     print(f"Feedback saved to {prediction_file}")
@@ -321,10 +421,10 @@ def submit_feedback(
         gr.update()                     # Keep thank_you_page_container as is
     )
 
-def home_page(subject_num, uncertainty_methods):
+def home_page(subject_num, uncertainty_methods, model_selection_mode):
     print("Proceeding from home page...")
-    if not subject_num or len(uncertainty_methods) == 0:
-        print("Subject number or uncertainty methods not provided.")
+    if not subject_num or len(uncertainty_methods) == 0 or not model_selection_mode:
+        print("Required information not provided.")
         return gr.update(), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
     print("Moving to consent page.")
     return (
@@ -356,6 +456,11 @@ with gr.Blocks() as demo:
     with gr.Column(visible=True) as home_page_container:
         subject_num = gr.Textbox(label="Subject Number")
         uncertainty_methods = gr.CheckboxGroup(choices=["Confidence %", "Bar Plot"], label="Select Uncertainty Methods")
+        model_selection_mode = gr.Radio(
+            choices=["Randomly pick one model per digit", "Use all models for each digit"],
+            label="Model Selection Mode",
+            value="Randomly pick one model per digit"  # Default value
+        )
         proceed_button = gr.Button("Proceed to Consent")
 
     # Consent Page
@@ -372,7 +477,7 @@ with gr.Blocks() as demo:
         original_drawing_display = gr.Image(label="Your Drawing")  # Display original drawing
         processed_drawing_display = gr.Image(label="Processed Drawing (28x28)")  # Display processed image
         prediction_text = gr.Textbox(label="Prediction", interactive=False)
-        probabilities_plot = gr.Image(label="Prediction Probabilities")
+        probabilities_plot = gr.Gallery(label="Prediction Probabilities")  # Changed to Gallery
         feedback_text = gr.Textbox(label="Feedback on the Prediction", placeholder="Enter your feedback here...", interactive=False)
         next_digit_button = gr.Button("Next Digit", interactive=False)
 
@@ -383,7 +488,7 @@ with gr.Blocks() as demo:
     # Home Page Button Click
     proceed_button.click(
         home_page,
-        inputs=[subject_num, uncertainty_methods],
+        inputs=[subject_num, uncertainty_methods, model_selection_mode],
         outputs=[home_page_container, consent_page_container, experiment_page_container, thank_you_page_container]
     )
 
@@ -397,13 +502,13 @@ with gr.Blocks() as demo:
     # Submit Drawing Button Click
     submit_drawing_button.click(
         process_drawing,
-        inputs=[drawing, subject_num, uncertainty_methods],
+        inputs=[drawing, subject_num, uncertainty_methods, model_selection_mode],
         outputs=[
             drawing,                  # Keep drawing as is
             original_drawing_display, # Display original drawing
             processed_drawing_display,# Display processed drawing
             prediction_text,          # Update prediction_text
-            probabilities_plot,       # Display probabilities_plot
+            probabilities_plot,       # Display probabilities_plot(s)
             instruction_text,         # Keep instruction_text
             feedback_text,            # Enable feedback_text
             next_digit_button         # Enable next_digit_button
