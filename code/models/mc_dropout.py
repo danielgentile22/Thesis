@@ -5,13 +5,14 @@ models = keras.models
 import numpy as np
 
 # Configuration variables for save paths
-MODEL_SAVE_PATH = "../../trained_models/mc_dropout_model.h5"         # Path to save the trained model
+MODEL_SAVE_PATH = "../../trained_models/mc_dropout_model.keras"         # Path to save the trained model
 RESULTS_FILE_PATH = "../../trained_models/results/mc_dropout_results.txt"  # Path to save training and evaluation results
 
 # Build a CNN model with MC Dropout
 def build_model():
     model = models.Sequential([
-        layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+        layers.Input(shape=(28, 28, 1)),
+        layers.Conv2D(32, (3, 3), activation='relu'),
         layers.MaxPooling2D((2, 2)),
         layers.Dropout(0.5),  # Dropout layer for MC Dropout
         
@@ -34,9 +35,10 @@ def build_model():
     
     return model
 
-# Train the model
-def train_model(model, x_train, y_train, epochs=5, batch_size=64):
-    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.2)
+# Train the model with early stopping
+def train_model(model, x_train, y_train, epochs=20, batch_size=64, patience=3):
+    early_stopping = keras.callbacks.EarlyStopping(monitor='val_loss', patience=patience, restore_best_weights=True)
+    history = model.fit(x_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.2, callbacks=[early_stopping])
     return history
 
 # Evaluate the model
