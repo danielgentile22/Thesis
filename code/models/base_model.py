@@ -5,8 +5,8 @@ models = keras.models
 import numpy as np
 
 # Configuration variables for save paths
-MODEL_SAVE_PATH = "../../trained_models/basic_mnist_model.h5"         # Path to save the trained model
-RESULTS_FILE_PATH = "../../trained_models/results/results.txt"         # Path to save training and evaluation results
+MODEL_SAVE_PATH = "../../trained_models/base_model.h5"         # Path to save the trained model
+RESULTS_FILE_PATH = "../../trained_models/results/base_model_results.txt"         # Path to save training and evaluation results
 
 # Build a basic CNN model
 def build_model():

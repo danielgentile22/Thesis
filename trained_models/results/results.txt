@@ -1,20 +1,20 @@
 Training and Validation Results:
-Epoch 1 - Loss: 0.2089, Accuracy: 0.9366, Val Loss: 0.0685, Val Accuracy: 0.9791
-Epoch 2 - Loss: 0.0574, Accuracy: 0.9818, Val Loss: 0.0452, Val Accuracy: 0.9866
-Epoch 3 - Loss: 0.0403, Accuracy: 0.9867, Val Loss: 0.0406, Val Accuracy: 0.9880
-Epoch 4 - Loss: 0.0312, Accuracy: 0.9900, Val Loss: 0.0402, Val Accuracy: 0.9877
-Epoch 5 - Loss: 0.0265, Accuracy: 0.9918, Val Loss: 0.0384, Val Accuracy: 0.9890
+Epoch 1 - Loss: 0.2165, Accuracy: 0.9333, Val Loss: 0.0755, Val Accuracy: 0.9775
+Epoch 2 - Loss: 0.0592, Accuracy: 0.9817, Val Loss: 0.0570, Val Accuracy: 0.9827
+Epoch 3 - Loss: 0.0416, Accuracy: 0.9870, Val Loss: 0.0531, Val Accuracy: 0.9838
+Epoch 4 - Loss: 0.0321, Accuracy: 0.9903, Val Loss: 0.0508, Val Accuracy: 0.9848
+Epoch 5 - Loss: 0.0266, Accuracy: 0.9911, Val Loss: 0.0491, Val Accuracy: 0.9856
 
-Test Loss: 0.0323, Test Accuracy: 0.9905
+Test Loss: 0.0435, Test Accuracy: 0.9858
 
 Sample Predictions with Confidence:
 Sample 0 - Predicted Digit: 7, Confidence: 100.00%
-Sample 1 - Predicted Digit: 2, Confidence: 99.99%
+Sample 1 - Predicted Digit: 2, Confidence: 100.00%
 Sample 2 - Predicted Digit: 1, Confidence: 100.00%
-Sample 3 - Predicted Digit: 0, Confidence: 99.98%
-Sample 4 - Predicted Digit: 4, Confidence: 100.00%
+Sample 3 - Predicted Digit: 0, Confidence: 100.00%
+Sample 4 - Predicted Digit: 4, Confidence: 99.96%
 Sample 5 - Predicted Digit: 1, Confidence: 100.00%
-Sample 6 - Predicted Digit: 4, Confidence: 99.98%
-Sample 7 - Predicted Digit: 9, Confidence: 99.85%
-Sample 8 - Predicted Digit: 5, Confidence: 98.98%
-Sample 9 - Predicted Digit: 9, Confidence: 99.97%
+Sample 6 - Predicted Digit: 4, Confidence: 99.94%
+Sample 7 - Predicted Digit: 9, Confidence: 100.00%
+Sample 8 - Predicted Digit: 5, Confidence: 99.64%
+Sample 9 - Predicted Digit: 9, Confidence: 100.00%
