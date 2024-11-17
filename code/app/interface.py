@@ -44,20 +44,32 @@ def initialize_experiment_state():
 def handle_drawing_input(drawing):
     """Handle the drawing input from Gradio and return a PIL Image."""
     if isinstance(drawing, dict):
-        if 'composite' in drawing and drawing['composite'] is not None:
+        # For Gradio versions >= 3.0, the image data is under the 'image' key
+        if 'image' in drawing and drawing['image'] is not None:
+            img_data = drawing['image']
+            if isinstance(img_data, np.ndarray):
+                img = Image.fromarray(img_data.astype('uint8'), 'RGBA')
+                return img
+            elif isinstance(img_data, Image.Image):
+                img = img_data.convert('RGBA')
+                return img
+        # For older versions or different configurations
+        elif 'composite' in drawing and drawing['composite'] is not None:
             img_data = drawing['composite']
             if isinstance(img_data, np.ndarray):
                 img = Image.fromarray(img_data.astype('uint8'), 'RGBA')
-                img = img.convert('RGB')
                 return img
             elif isinstance(img_data, Image.Image):
-                img = img_data.convert('RGB')
+                img = img_data.convert('RGBA')
                 return img
         else:
-            print("No drawing data found in 'composite' key.")
+            print("No drawing data found in 'image' or 'composite' key.")
             return None
+    elif isinstance(drawing, np.ndarray):
+        img = Image.fromarray(drawing.astype('uint8'), 'RGBA')
+        return img
     elif isinstance(drawing, Image.Image):
-        img = drawing.convert('RGB')
+        img = drawing.convert('RGBA')
         return img
     else:
         print("Unsupported drawing input type.")
@@ -115,6 +127,8 @@ def process_drawing(
 
     # Preprocess the image
     img_array, img_resized = preprocess_image(img)
+    if img_array is None or img_resized is None:
+        return generate_error_response("Preprocessing failed. Please draw a clearer digit.")
 
     # Save the preprocessed image
     processed_file_path = os.path.join(draw_folder, "processed_drawing.png")
@@ -226,7 +240,7 @@ def predict_model(model_name, model, img_array):
         predicted_labels, confidence, probabilities = predict_with_ensemble(model, img_array)
     else:
         raise ValueError("Unknown model name.")
-    predicted_digit = predicted_labels[0]
+    predicted_digit = int(predicted_labels[0])
     confidence_value = confidence[0]
     return predicted_digit, confidence_value, probabilities
 
@@ -266,19 +280,8 @@ def submit_feedback(feedback, subject_num):
     print(f"Submitting feedback for digit {current_digit} (Index: {current_index})")
 
     # Locate the prediction file
-    prediction_file = os.path.join(
-        BASE_RESULTS_DIR,
-        f"Subject_{subject_num}",
-        f"digit_{current_digit}",
-        f"draw_*",
-        "prediction.txt"
-    )
-    # Since draw_folder includes draw number, we need to find the latest one
-    digit_folder = os.path.join(
-        BASE_RESULTS_DIR,
-        f"Subject_{subject_num}",
-        f"digit_{current_digit}"
-    )
+    subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
+    digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
     draw_folders = sorted([d for d in os.listdir(digit_folder) if d.startswith("draw_")])
     if draw_folders:
         last_draw_folder = draw_folders[-1]
