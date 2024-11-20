@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 
 def preprocess_image(img):
     """
-    Preprocess the image: convert to grayscale, center the drawing, scale to 28x28,
-    ensuring the drawing is centered and scaled to occupy as much of the 28x28 canvas as possible
-    without touching the borders and without changing the aspect ratio.
+    Preprocess the image: convert to grayscale and scale to 28x28
+    without resizing, centering, or aspect ratio adjustments.
 
     Args:
         img (PIL.Image): The PIL Image to preprocess.
@@ -32,6 +31,9 @@ def preprocess_image(img):
     # Invert image so that the digit is white on black background
     img = ImageOps.invert(img)
 
+    # Resize to 28x28 without centering
+    img = img.resize((28, 28), Image.LANCZOS)
+
     # Convert to numpy array
     img_array = np.array(img)
 
@@ -39,42 +41,11 @@ def preprocess_image(img):
     threshold = 20
     img_array = np.where(img_array > threshold, 255, 0).astype(np.uint8)
 
-    # Find bounding box of the digit
-    coords = np.column_stack(np.where(img_array > 0))
-    if coords.size == 0:
-        # Empty image
-        print("Empty image after preprocessing.")
-        return None, None
-    y_min, x_min = coords.min(axis=0)
-    y_max, x_max = coords.max(axis=0)
-
-    # Crop the image to the bounding box
-    cropped_img_array = img_array[y_min:y_max+1, x_min:x_max+1]
-
-    # Determine scaling factor to fit the image into 20x20 (to leave margins when centered in 28x28)
-    max_dim = max(cropped_img_array.shape)
-    scaling_factor = 20.0 / max_dim
-
-    # Resize the image to new size while maintaining aspect ratio
-    new_size = (
-        int(cropped_img_array.shape[1] * scaling_factor),
-        int(cropped_img_array.shape[0] * scaling_factor)
-    )
-    resized_img = Image.fromarray(cropped_img_array).resize(new_size, Image.LANCZOS)
-
-    # Create a new 28x28 image and paste the resized image into the center
-    new_img = Image.new('L', (28, 28), color=0)  # black background
-    upper_left = (
-        (28 - new_size[0]) // 2,
-        (28 - new_size[1]) // 2
-    )
-    new_img.paste(resized_img, upper_left)
-
-    # Convert to numpy array and normalize
-    img_array = np.array(new_img).astype(np.float32) / 255.0
+    # Normalize image for model input
+    img_array = img_array.astype(np.float32) / 255.0
     img_array = img_array.reshape(1, 28, 28, 1)
     print("Image preprocessing completed.")
-    return img_array, new_img
+    return img_array, img
 
 def plot_probabilities(probabilities, model_name):
     """
