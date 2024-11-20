@@ -63,17 +63,17 @@ with gr.Blocks() as demo:
 
         ### How to Start Drawing
         """)
-        drawing_instructions_image = gr.Image(value="../../images/draw_button.png", interactive=False)
+        drawing_instructions_image = gr.Image(value="../../images/draw_button.png", interactive=False, width=1500)
         gr.Markdown("""
         ### Adjusting Brush Width
         Adjust to around 25% (this only needs to be done at the start)
         """)
-        brush_width_image = gr.Image(value="../../images/brush_size.png", interactive=False)
+        brush_width_image = gr.Image(value="../../images/brush_size.png", interactive=False, width=600)
         gr.Markdown("""
         ### Clearing the Canvas
         This needs to be done when drawing is not satisfactory or when the previous drawing is still present when the next digit is being requested.
         """)
-        clear_canvas_image = gr.Image(value="../../images/clear_canvas.png", interactive=False)
+        clear_canvas_image = gr.Image(value="../../images/clear_canvas.png", interactive=False, width=600)
         gr.Markdown("""
         ### What Will Be Shown
         - Your drawing as an image
