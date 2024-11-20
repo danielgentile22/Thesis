@@ -43,9 +43,24 @@ with gr.Blocks() as demo:
         processed_drawing_display = gr.Image(label="Processed Drawing (28x28)")  # Display processed image
         prediction_text = gr.Textbox(label="Prediction", interactive=False)
         probabilities_plot = gr.Gallery(label="Prediction Probabilities")
-        feedback_text = gr.Textbox(
-            label="Feedback on the Prediction",
-            placeholder="Enter your feedback here...",
+        
+        # New Feedback Section with Likert Scale Questions
+        feedback_instruction = gr.Markdown(
+            "Evaluate the model with some sympathy. At times it will make mistakes if not too confident or it might be uncertain about a correct prediction if it is a difficult one. Please answer the following questions with this in mind."
+        )
+        q1 = gr.Radio(
+            choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
+            label="1. Is the top prediction appropriate?",
+            interactive=False
+        )
+        q2 = gr.Radio(
+            choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
+            label="2. Are the alternative predictions appropriate?",
+            interactive=False
+        )
+        q3 = gr.Radio(
+            choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
+            label="3. In relation to how clear the drawing is, is the prediction too confident?",
             interactive=False
         )
         next_digit_button = gr.Button("Next Digit", interactive=False)
@@ -87,14 +102,16 @@ with gr.Blocks() as demo:
             model_selection_mode
         ],
         outputs=[
-            drawing,                   # Keep drawing as is
-            original_drawing_display,  # Display original drawing
-            processed_drawing_display, # Display processed drawing
-            prediction_text,           # Update prediction_text
-            probabilities_plot,        # Display probabilities_plot(s)
-            instruction_text,          # Keep instruction_text
-            feedback_text,             # Enable feedback_text
-            next_digit_button          # Enable next_digit_button
+            drawing,                      # Keep drawing as is
+            original_drawing_display,     # Display original drawing
+            processed_drawing_display,    # Display processed drawing
+            prediction_text,              # Update prediction_text
+            probabilities_plot,           # Display probabilities_plot(s)
+            instruction_text,             # Keep instruction_text
+            q1,                           # Enable q1
+            q2,                           # Enable q2
+            q3,                           # Enable q3
+            next_digit_button             # Enable next_digit_button
         ]
     )
 
@@ -102,7 +119,9 @@ with gr.Blocks() as demo:
     next_digit_button.click(
         submit_feedback,
         inputs=[
-            feedback_text,
+            q1,
+            q2,
+            q3,
             subject_num
         ],
         outputs=[
@@ -112,7 +131,9 @@ with gr.Blocks() as demo:
             prediction_text,            # Clear prediction_text
             probabilities_plot,         # Clear probabilities_plot
             instruction_text,           # Update instruction_text
-            feedback_text,              # Clear and disable feedback_text
+            q1,                         # Clear and disable q1
+            q2,                         # Clear and disable q2
+            q3,                         # Clear and disable q3
             next_digit_button,          # Disable next_digit_button
             experiment_page_container,  # Show/hide experiment page
             thank_you_page_container    # Show/hide thank you page

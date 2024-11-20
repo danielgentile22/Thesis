@@ -79,14 +79,16 @@ def generate_error_response(error_message):
     """Generate an error response for Gradio outputs."""
     print(error_message)
     return (
-        gr.update(),
-        None,
-        None,
-        error_message,
-        None,
-        gr.update(),
-        gr.update(),
-        gr.update()
+        gr.update(),                # drawing
+        None,                       # original_drawing_display
+        None,                       # processed_drawing_display
+        error_message,              # prediction_text
+        None,                       # probabilities_plot
+        gr.update(),                # instruction_text
+        gr.update(),                # q1
+        gr.update(),                # q2
+        gr.update(),                # q3
+        gr.update(interactive=False)  # next_digit_button
     )
 
 def process_drawing(
@@ -155,7 +157,7 @@ def process_drawing(
     else:
         return generate_error_response("Unknown model selection mode.")
 
-    # Enable feedback_text and next_digit_button
+    # Enable Likert Scale Questions and next_digit_button
     print("Processing completed.")
     return (
         gr.update(),               # Keep drawing as is
@@ -164,7 +166,9 @@ def process_drawing(
         prediction_text_output,    # Update prediction_text
         plot_images,               # Display probabilities_plot(s)
         gr.update(),               # instruction_text remains the same
-        gr.update(interactive=True),  # Enable feedback_text
+        gr.update(interactive=True),  # Enable q1
+        gr.update(interactive=True),  # Enable q2
+        gr.update(interactive=True),  # Enable q3
         gr.update(interactive=True)   # Enable next_digit_button
     )
 
@@ -272,7 +276,7 @@ def generate_plots(probabilities, model_name, uncertainty_methods, draw_folder):
         plot_images.append(plot_image)
     return plot_images
 
-def submit_feedback(feedback, subject_num):
+def submit_feedback(q1_answer, q2_answer, q3_answer, subject_num):
     """Handle feedback submission and update the experiment state."""
     global digits_to_draw, current_index
 
@@ -292,7 +296,10 @@ def submit_feedback(feedback, subject_num):
 
     # Append feedback to prediction file
     with open(prediction_file, 'a') as f:
-        f.write(f"Feedback: {feedback}\n")
+        f.write(f"\nFeedback:\n")
+        f.write(f"1. Is the top prediction appropriate? {q1_answer}\n")
+        f.write(f"2. Are the alternative predictions appropriate? {q2_answer}\n")
+        f.write(f"3. In relation to how clear the drawing is, is the prediction too confident? {q3_answer}\n")
     print(f"Feedback saved to {prediction_file}")
 
     # Move to the next digit
@@ -324,10 +331,12 @@ def end_experiment_response():
         "",                      # Clear prediction_text
         None,                    # Clear probabilities_plot
         gr.update(value="Thank you for participating!"),  # Update instruction_text
-        gr.update(value="", interactive=False),  # Clear and disable feedback_text
-        gr.update(interactive=False),            # Disable next_digit_button
-        gr.update(visible=False),                # Hide experiment_page_container
-        gr.update(visible=True)                  # Show thank_you_page_container
+        gr.update(value=None, interactive=False),  # Clear and disable q1
+        gr.update(value=None, interactive=False),  # Clear and disable q2
+        gr.update(value=None, interactive=False),  # Clear and disable q3
+        gr.update(interactive=False),              # Disable next_digit_button
+        gr.update(visible=False),                  # Hide experiment_page_container
+        gr.update(visible=True)                    # Show thank_you_page_container
     )
 
 def continue_experiment_response(instruction):
@@ -339,7 +348,9 @@ def continue_experiment_response(instruction):
         "",                             # Clear prediction_text
         None,                           # Clear probabilities_plot
         gr.update(value=instruction),   # Update instruction_text
-        gr.update(value="", interactive=False),  # Clear and disable feedback_text
+        gr.update(value=None, interactive=False),  # Clear and disable q1
+        gr.update(value=None, interactive=False),  # Clear and disable q2
+        gr.update(value=None, interactive=False),  # Clear and disable q3
         gr.update(interactive=False),   # Disable next_digit_button
         gr.update(),                    # Keep experiment_page_container as is
         gr.update()                     # Keep thank_you_page_container as is
@@ -350,7 +361,12 @@ def home_page(subject_num, uncertainty_methods, model_selection_mode):
     print("Proceeding from home page...")
     if not subject_num or len(uncertainty_methods) == 0 or not model_selection_mode:
         print("Required information not provided.")
-        return gr.update(), gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+        return (
+            gr.update(),                # home_page_container remains as is
+            gr.update(visible=False),   # consent_page_container remains hidden
+            gr.update(visible=False),   # experiment_page_container remains hidden
+            gr.update(visible=False)    # thank_you_page_container remains hidden
+        )
     print("Moving to consent page.")
     return (
         gr.update(visible=False),  # Hide home page
@@ -375,4 +391,8 @@ def consent_page(agree):
         )
     else:
         print("Consent not given. Staying on consent page.")
-        return gr.update(), gr.update(visible=False), gr.update()
+        return (
+            gr.update(),               # consent_page_container remains as is
+            gr.update(visible=False),  # experiment_page_container remains hidden
+            gr.update()                # instruction_text remains as is
+        )
