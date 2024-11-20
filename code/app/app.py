@@ -6,6 +6,7 @@ from interface import (
     submit_feedback,
     home_page,
     consent_page,
+    instructions_page,
 )
 from config import MAX_DRAW_PER_DIGIT
 
@@ -26,42 +27,96 @@ with gr.Blocks() as demo:
             label="Model Selection Mode",
             value="Randomly pick one model per digit"  # Default value
         )
+        # New options to include/exclude content boxes
+        content_options = gr.CheckboxGroup(
+            choices=[
+                "Your Drawing",
+                "Processed Drawing",
+                "Prediction Text",
+                "Probabilities Plot",
+                "Feedback Questions",
+                "Show Model Name"  # New option added
+            ],
+            label="Select Content to Display",
+            value=[
+                "Processed Drawing",
+                "Prediction Text",
+                "Probabilities Plot",
+                "Feedback Questions"
+            ]
+        )
         proceed_button = gr.Button("Proceed to Consent")
 
     # Consent Page
     with gr.Column(visible=False) as consent_page_container:
         gr.Markdown("This is an experiment. Do you agree to participate?")
         agree_checkbox = gr.Checkbox(label="I agree to participate in this experiment.")
-        start_experiment_button = gr.Button("Start Experiment")
+        start_experiment_button = gr.Button("Proceed to Instructions")
+
+    # Instructions Page
+    with gr.Column(visible=False) as instructions_page_container:
+        gr.Markdown("## Experiment Instructions")
+        gr.Markdown("""
+        At the top, you will receive instructions on which number to draw.
+        
+        Then you can move to the canvas and start your drawing as shown below:
+
+        ### How to Start Drawing
+        """)
+        drawing_instructions_image = gr.Image(value="../../images/draw_button.png", interactive=False)
+        gr.Markdown("""
+        ### Adjusting Brush Width
+        Adjust to around 25% (this only needs to be done at the start)
+        """)
+        brush_width_image = gr.Image(value="../../images/brush_size.png", interactive=False)
+        gr.Markdown("""
+        ### Clearing the Canvas
+        This needs to be done when drawing is not satisfactory or when the previous drawing is still present when the next digit is being requested.
+        """)
+        clear_canvas_image = gr.Image(value="../../images/clear_canvas.png", interactive=False)
+        gr.Markdown("""
+        ### What Will Be Shown
+        - Your drawing as an image
+        - Prediction which includes the predicted digit and the confidence level
+        - Prediction probabilities as a bar plot
+        - Feedback questions to evaluate the model
+        """)
+        # Additional instructions can be added here
+        proceed_to_experiment_button = gr.Button("Start Experiment")
 
     # Experiment Page
     with gr.Column(visible=False) as experiment_page_container:
         instruction_text = gr.Textbox(label="Instructions", interactive=False)
         drawing = gr.ImageEditor(label="Draw a Digit", height=400, width=400)
         submit_drawing_button = gr.Button("Submit Drawing")
-        original_drawing_display = gr.Image(label="Your Drawing")  # Display original drawing
-        processed_drawing_display = gr.Image(label="Processed Drawing (28x28)")  # Display processed image
-        prediction_text = gr.Textbox(label="Prediction", interactive=False)
-        probabilities_plot = gr.Gallery(label="Prediction Probabilities")
-        
-        # New Feedback Section with Likert Scale Questions
+        # Content boxes that can be included or excluded
+        original_drawing_display = gr.Image(label="Your Drawing", visible=False)
+        processed_drawing_display = gr.Image(label="Processed Drawing (28x28)", visible=False)
+        prediction_text = gr.Textbox(label="Prediction", interactive=False, visible=False)
+        probabilities_plot = gr.Gallery(label="Prediction Probabilities", visible=False)
+
+        # Feedback Questions (Likert Scale)
         feedback_instruction = gr.Markdown(
-            "Evaluate the model with some sympathy. At times it will make mistakes if not too confident or it might be uncertain about a correct prediction if it is a difficult one. Please answer the following questions with this in mind."
+            "Evaluate the model with some sympathy. At times it will make mistakes if not too confident or it might be uncertain about a correct prediction if it is a difficult one. Please answer the following questions with this in mind.",
+            visible=False
         )
         q1 = gr.Radio(
             choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
             label="1. Is the top prediction appropriate?",
-            interactive=False
+            interactive=False,
+            visible=False
         )
         q2 = gr.Radio(
             choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
             label="2. Are the alternative predictions appropriate?",
-            interactive=False
+            interactive=False,
+            visible=False
         )
         q3 = gr.Radio(
             choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
             label="3. In relation to how clear the drawing is, is the prediction too confident?",
-            interactive=False
+            interactive=False,
+            visible=False
         )
         next_digit_button = gr.Button("Next Digit", interactive=False)
 
@@ -72,12 +127,22 @@ with gr.Blocks() as demo:
     # Home Page Button Click
     proceed_button.click(
         home_page,
-        inputs=[subject_num, uncertainty_methods, model_selection_mode],
+        inputs=[subject_num, uncertainty_methods, model_selection_mode, content_options],
         outputs=[
             home_page_container,
             consent_page_container,
+            instructions_page_container,
             experiment_page_container,
-            thank_you_page_container
+            thank_you_page_container,
+            # Passing content_options to interface.py
+            original_drawing_display,
+            processed_drawing_display,
+            prediction_text,
+            probabilities_plot,
+            feedback_instruction,
+            q1,
+            q2,
+            q3,
         ]
     )
 
@@ -87,6 +152,15 @@ with gr.Blocks() as demo:
         inputs=[agree_checkbox],
         outputs=[
             consent_page_container,
+            instructions_page_container
+        ]
+    )
+
+    # Instructions Page Button Click
+    proceed_to_experiment_button.click(
+        instructions_page,
+        outputs=[
+            instructions_page_container,
             experiment_page_container,
             instruction_text
         ]
@@ -99,7 +173,8 @@ with gr.Blocks() as demo:
             drawing,
             subject_num,
             uncertainty_methods,
-            model_selection_mode
+            model_selection_mode,
+            content_options
         ],
         outputs=[
             drawing,                      # Keep drawing as is

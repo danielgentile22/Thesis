@@ -32,6 +32,9 @@ uncertainty_models = {
 digits_to_draw = []
 current_index = 0
 
+# Global variable to store content options
+content_options_global = []
+
 def initialize_experiment_state():
     """Initialize and shuffle the list of digits to draw."""
     global digits_to_draw, current_index
@@ -78,26 +81,30 @@ def handle_drawing_input(drawing):
 def generate_error_response(error_message):
     """Generate an error response for Gradio outputs."""
     print(error_message)
-    return (
+    # Adjust outputs based on content options
+    outputs = [
         gr.update(),                # drawing
-        None,                       # original_drawing_display
-        None,                       # processed_drawing_display
-        error_message,              # prediction_text
-        None,                       # probabilities_plot
+        None if "Your Drawing" in content_options_global else gr.update(visible=False),                       # original_drawing_display
+        None if "Processed Drawing" in content_options_global else gr.update(visible=False),                  # processed_drawing_display
+        error_message if "Prediction Text" in content_options_global else gr.update(visible=False),           # prediction_text
+        None if "Probabilities Plot" in content_options_global else gr.update(visible=False),                 # probabilities_plot
         gr.update(),                # instruction_text
         gr.update(),                # q1
         gr.update(),                # q2
         gr.update(),                # q3
         gr.update(interactive=False)  # next_digit_button
-    )
+    ]
+    return tuple(outputs)
 
 def process_drawing(
     drawing,
     subject_num,
     uncertainty_methods,
-    model_selection_mode
+    model_selection_mode,
+    content_options
 ):
-    global digits_to_draw, current_index
+    global digits_to_draw, current_index, content_options_global
+    content_options_global = content_options  # Store content options globally
 
     if current_index >= len(digits_to_draw):
         # All digits have been drawn; reset the experiment state
@@ -159,18 +166,34 @@ def process_drawing(
 
     # Enable Likert Scale Questions and next_digit_button
     print("Processing completed.")
-    return (
-        gr.update(),               # Keep drawing as is
-        original_display,          # Display original drawing
-        processed_display,         # Display processed drawing
-        prediction_text_output,    # Update prediction_text
-        plot_images,               # Display probabilities_plot(s)
-        gr.update(),               # instruction_text remains the same
-        gr.update(interactive=True),  # Enable q1
-        gr.update(interactive=True),  # Enable q2
-        gr.update(interactive=True),  # Enable q3
-        gr.update(interactive=True)   # Enable next_digit_button
-    )
+
+    # Prepare outputs based on content options
+    outputs = [
+        gr.update(),                               # Keep drawing as is
+        original_display if "Your Drawing" in content_options else gr.update(visible=False),           # original_drawing_display
+        processed_display if "Processed Drawing" in content_options else gr.update(visible=False),     # processed_drawing_display
+        prediction_text_output if "Prediction Text" in content_options else gr.update(visible=False),  # prediction_text
+        plot_images if "Probabilities Plot" in content_options else gr.update(visible=False),          # probabilities_plot
+        gr.update(),                               # instruction_text remains the same
+    ]
+
+    # Handle feedback questions
+    if "Feedback Questions" in content_options:
+        outputs.extend([
+            gr.update(interactive=True, visible=True),  # Enable q1
+            gr.update(interactive=True, visible=True),  # Enable q2
+            gr.update(interactive=True, visible=True),  # Enable q3
+        ])
+    else:
+        outputs.extend([
+            gr.update(visible=False),  # Hide q1
+            gr.update(visible=False),  # Hide q2
+            gr.update(visible=False),  # Hide q3
+        ])
+
+    outputs.append(gr.update(interactive=True))  # Enable next_digit_button
+
+    return tuple(outputs)
 
 def process_single_model(img_array, uncertainty_methods, draw_folder, current_digit):
     """Process the drawing using a single randomly selected model."""
@@ -189,11 +212,11 @@ def process_single_model(img_array, uncertainty_methods, draw_folder, current_di
     )
 
     prediction_text_output = format_prediction_text(
-        selected_model_name, predicted_digit, confidence_value, uncertainty_methods
+        selected_model_name, predicted_digit, confidence_value, uncertainty_methods, content_options_global
     )
 
     plot_images = generate_plots(
-        probabilities_for_plot, selected_model_name, uncertainty_methods, draw_folder
+        probabilities_for_plot, selected_model_name, uncertainty_methods, draw_folder, content_options_global
     )
 
     return prediction_text_output, plot_images
@@ -216,7 +239,7 @@ def process_all_models(img_array, uncertainty_methods, draw_folder, current_digi
             )
 
             prediction_text = format_prediction_text(
-                model_name, predicted_digit, confidence_value, uncertainty_methods
+                model_name, predicted_digit, confidence_value, uncertainty_methods, content_options_global
             )
             prediction_text_output_list.append(prediction_text)
 
@@ -227,7 +250,7 @@ def process_all_models(img_array, uncertainty_methods, draw_folder, current_digi
 
             # Generate bar plot if selected
             plots = generate_plots(
-                probabilities_for_plot, model_name, uncertainty_methods, draw_folder
+                probabilities_for_plot, model_name, uncertainty_methods, draw_folder, content_options_global
             )
             plot_images.extend(plots)
 
@@ -257,18 +280,23 @@ def save_prediction(prediction_file, intended_digit, model_name, predicted_digit
         f.write(f"Confidence: {confidence_value:.2f}%\n")
     print(f"Prediction saved at {prediction_file}")
 
-def format_prediction_text(model_name, predicted_digit, confidence_value, uncertainty_methods):
+def format_prediction_text(model_name, predicted_digit, confidence_value, uncertainty_methods, content_options):
     """Format the prediction text for display."""
     if "Confidence %" in uncertainty_methods:
-        return f"{model_name} - Predicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%"
+        text = f"Predicted Digit: {predicted_digit}, Confidence: {confidence_value:.2f}%"
     else:
-        return f"{model_name} - Predicted Digit: {predicted_digit}"
+        text = f"Predicted Digit: {predicted_digit}"
 
-def generate_plots(probabilities, model_name, uncertainty_methods, draw_folder):
+    if "Show Model Name" in content_options:
+        text = f"{model_name} - {text}"
+
+    return text
+
+def generate_plots(probabilities, model_name, uncertainty_methods, draw_folder, content_options):
     """Generate and save plots if required."""
     plot_images = []
     if "Bar Plot" in uncertainty_methods:
-        plot_image = plot_probabilities(probabilities, model_name)
+        plot_image = plot_probabilities(probabilities, model_name, content_options)
         # Save the plot
         plot_file_path = os.path.join(draw_folder, f"probabilities_plot_{model_name.replace(' ', '_')}.png")
         plot_image.save(plot_file_path)
@@ -324,75 +352,120 @@ def reset_experiment_state():
 
 def end_experiment_response():
     """Generate the response to end the experiment."""
-    return (
+    # Adjust outputs based on content options
+    outputs = [
         gr.update(value=None),   # Clear drawing
-        None,                    # Clear original drawing display
-        None,                    # Clear processed drawing display
-        "",                      # Clear prediction_text
-        None,                    # Clear probabilities_plot
+        None if "Your Drawing" in content_options_global else gr.update(visible=False),   # Clear original drawing display
+        None if "Processed Drawing" in content_options_global else gr.update(visible=False),   # Clear processed drawing display
+        "" if "Prediction Text" in content_options_global else gr.update(visible=False),  # Clear prediction_text
+        None if "Probabilities Plot" in content_options_global else gr.update(visible=False),  # Clear probabilities_plot
         gr.update(value="Thank you for participating!"),  # Update instruction_text
-        gr.update(value=None, interactive=False),  # Clear and disable q1
-        gr.update(value=None, interactive=False),  # Clear and disable q2
-        gr.update(value=None, interactive=False),  # Clear and disable q3
+        gr.update(value=None, interactive=False, visible=False),  # Clear and disable q1
+        gr.update(value=None, interactive=False, visible=False),  # Clear and disable q2
+        gr.update(value=None, interactive=False, visible=False),  # Clear and disable q3
         gr.update(interactive=False),              # Disable next_digit_button
         gr.update(visible=False),                  # Hide experiment_page_container
         gr.update(visible=True)                    # Show thank_you_page_container
-    )
+    ]
+    return tuple(outputs)
 
 def continue_experiment_response(instruction):
     """Generate the response to continue the experiment."""
-    return (
+    # Adjust outputs based on content options
+    outputs = [
         gr.update(value=None),          # Clear drawing
-        None,                           # Clear original drawing display
-        None,                           # Clear processed drawing display
-        "",                             # Clear prediction_text
-        None,                           # Clear probabilities_plot
+        None if "Your Drawing" in content_options_global else gr.update(visible=False),   # Clear original drawing display
+        None if "Processed Drawing" in content_options_global else gr.update(visible=False),   # Clear processed drawing display
+        "" if "Prediction Text" in content_options_global else gr.update(visible=False),  # Clear prediction_text
+        None if "Probabilities Plot" in content_options_global else gr.update(visible=False),  # Clear probabilities_plot
         gr.update(value=instruction),   # Update instruction_text
-        gr.update(value=None, interactive=False),  # Clear and disable q1
-        gr.update(value=None, interactive=False),  # Clear and disable q2
-        gr.update(value=None, interactive=False),  # Clear and disable q3
-        gr.update(interactive=False),   # Disable next_digit_button
+    ]
+
+    # Handle feedback questions
+    if "Feedback Questions" in content_options_global:
+        outputs.extend([
+            gr.update(value=None, interactive=False, visible=True),  # Clear and disable q1
+            gr.update(value=None, interactive=False, visible=True),  # Clear and disable q2
+            gr.update(value=None, interactive=False, visible=True),  # Clear and disable q3
+        ])
+    else:
+        outputs.extend([
+            gr.update(visible=False),  # Hide q1
+            gr.update(visible=False),  # Hide q2
+            gr.update(visible=False),  # Hide q3
+        ])
+
+    outputs.append(gr.update(interactive=False))  # Disable next_digit_button
+    outputs.extend([
         gr.update(),                    # Keep experiment_page_container as is
         gr.update()                     # Keep thank_you_page_container as is
-    )
+    ])
+    return tuple(outputs)
 
-def home_page(subject_num, uncertainty_methods, model_selection_mode):
+def home_page(subject_num, uncertainty_methods, model_selection_mode, content_options):
     """Handle the transition from the home page to the consent page."""
+    global content_options_global
+    content_options_global = content_options  # Store content options globally
     print("Proceeding from home page...")
     if not subject_num or len(uncertainty_methods) == 0 or not model_selection_mode:
         print("Required information not provided.")
         return (
             gr.update(),                # home_page_container remains as is
             gr.update(visible=False),   # consent_page_container remains hidden
+            gr.update(visible=False),   # instructions_page_container remains hidden
             gr.update(visible=False),   # experiment_page_container remains hidden
-            gr.update(visible=False)    # thank_you_page_container remains hidden
+            gr.update(visible=False),   # thank_you_page_container remains hidden
+            gr.update(),                # original_drawing_display
+            gr.update(),                # processed_drawing_display
+            gr.update(),                # prediction_text
+            gr.update(),                # probabilities_plot
+            gr.update(),                # feedback_instruction
+            gr.update(),                # q1
+            gr.update(),                # q2
+            gr.update(),                # q3
         )
     print("Moving to consent page.")
     return (
         gr.update(visible=False),  # Hide home page
         gr.update(visible=True),   # Show consent page
-        gr.update(visible=False),  # Experiment page remains hidden
-        gr.update(visible=False)   # Thank you page remains hidden
+        gr.update(visible=False),  # instructions_page_container remains hidden
+        gr.update(visible=False),  # experiment_page_container remains hidden
+        gr.update(visible=False),  # thank_you_page_container remains hidden
+        # Update visibility of content boxes
+        gr.update(visible="Your Drawing" in content_options),
+        gr.update(visible="Processed Drawing" in content_options),
+        gr.update(visible="Prediction Text" in content_options),
+        gr.update(visible="Probabilities Plot" in content_options),
+        gr.update(visible="Feedback Questions" in content_options),
+        gr.update(visible="Feedback Questions" in content_options),
+        gr.update(visible="Feedback Questions" in content_options),
+        gr.update(visible="Feedback Questions" in content_options),
     )
 
 def consent_page(agree):
     """Handle the consent page logic."""
-    global current_index
-
     if agree:
-        initialize_experiment_state()
-        current_digit = digits_to_draw[current_index]
-        instruction = f"Please draw the digit {current_digit}"
-        print("Consent given. Starting experiment.")
+        print("Consent given. Proceeding to instructions.")
         return (
             gr.update(visible=False),  # Hide consent page
-            gr.update(visible=True),   # Show experiment page
-            gr.update(value=instruction)
+            gr.update(visible=True)    # Show instructions page
         )
     else:
         print("Consent not given. Staying on consent page.")
         return (
             gr.update(),               # consent_page_container remains as is
-            gr.update(visible=False),  # experiment_page_container remains hidden
-            gr.update()                # instruction_text remains as is
+            gr.update(visible=False)   # instructions_page_container remains hidden
         )
+
+def instructions_page():
+    """Handle the transition from instructions page to experiment page."""
+    global current_index
+    initialize_experiment_state()
+    current_digit = digits_to_draw[current_index]
+    instruction = f"Please draw the digit {current_digit}"
+    print("Starting experiment.")
+    return (
+        gr.update(visible=False),  # Hide instructions page
+        gr.update(visible=True),   # Show experiment page
+        gr.update(value=instruction)
+    )

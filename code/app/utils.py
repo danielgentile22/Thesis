@@ -47,24 +47,34 @@ def preprocess_image(img):
     print("Image preprocessing completed.")
     return img_array, img
 
-def plot_probabilities(probabilities, model_name):
+def plot_probabilities(probabilities, model_name, content_options):
     """
     Plot the prediction probabilities as a bar chart.
 
     Args:
         probabilities (np.ndarray): The prediction probabilities.
         model_name (str): Name of the model used for prediction.
+        content_options (list): List of content options selected.
 
     Returns:
         PIL.Image: The plotted bar chart as an image.
     """
+    import matplotlib.pyplot as plt
+    import io
+
     digits = list(range(10))
     probabilities = probabilities.flatten()
     plt.figure(figsize=(6, 4))
     bars = plt.bar(digits, probabilities, color='skyblue')
     plt.xlabel("Digit")
     plt.ylabel("Probability")
-    plt.title(f"Prediction Probabilities ({model_name})")
+
+    # Adjust title based on whether to show model name
+    if "Show Model Name" in content_options:
+        plt.title(f"Prediction Probabilities ({model_name})")
+    else:
+        plt.title("Prediction Probabilities")
+
     plt.xticks(digits)
     plt.ylim([0, 1])
 
