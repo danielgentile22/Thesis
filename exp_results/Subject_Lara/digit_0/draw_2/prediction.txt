@@ -1,0 +1,9 @@
+Intended Digit: 0
+Model Used: MC-Dropout
+Predicted Digit: 0
+Confidence: 86.44%
+
+Feedback:
+1. Is the top prediction appropriate? Agree
+2. Are the alternative predictions appropriate? Agree
+3. In relation to how clear the drawing is, is the prediction too confident? Disagree
