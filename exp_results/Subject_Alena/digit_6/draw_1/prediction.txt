@@ -1,0 +1,4 @@
+Intended Digit: 6
+Model Used: MC-Dropout
+Predicted Digit: 6
+Confidence: 48.90%

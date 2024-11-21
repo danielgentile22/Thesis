@@ -1,0 +1,9 @@
+Intended Digit: 7
+Model Used: Base Model
+Predicted Digit: 1
+Confidence: 78.62%
+
+Feedback:
+1. Is the top prediction appropriate? Agree
+2. Are the alternative predictions appropriate? Agree
+3. In relation to how clear the drawing is, is the prediction too confident? Disagree

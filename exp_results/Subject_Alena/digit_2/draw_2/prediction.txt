@@ -1,0 +1,9 @@
+Intended Digit: 2
+Model Used: Ensemble Model
+Predicted Digit: 1
+Confidence: 78.44%
+
+Feedback:
+1. Is the top prediction appropriate? Disagree
+2. Are the alternative predictions appropriate? Agree
+3. In relation to how clear the drawing is, is the prediction too confident? Agree
