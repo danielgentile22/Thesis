@@ -55,33 +55,85 @@ with gr.Blocks() as demo:
 
     # Instructions Page
     with gr.Column(visible=False) as instructions_page_container:
-        gr.Markdown("## Experiment Instructions")
+        gr.Markdown("# Experiment Instructions")
         gr.Markdown("""
-        At the top, you will receive instructions on which number to draw.
-        
-        Then you can move to the canvas and start your drawing as shown below:
-
-        ### How to Start Drawing
+        ### 1. Number to Draw            
+        At the top, you will receive instructions on which number to draw, as shown below:
         """)
-        drawing_instructions_image = gr.Image(value="../../images/draw_button.png", interactive=False, width=1500)
+        number_instructions_image = gr.Image(value="../../images/number_instruction.png", interactive=False, width=1500)
+        
         gr.Markdown("""
-        ### Adjusting Brush Width
-        Adjust to around 25% (this only needs to be done at the start)
+        ### 2. How to Start Drawing
+        Move to the canvas and start your drawing.\\
+        Press the "Draw Button" to begin drawing.\\
+        Please use as much of the canvas as possible without altering the way you would want to draw the requested digit.
+        """)
+        drawing_instructions_image = gr.Image(value="../../images/draw_button.png", interactive=False, width=600)
+        
+        gr.Markdown("""
+        ### 3. Adjusting Brush Width
+        Leave the color choice as is (red) and adjust to around 25% (this only needs to be done at the start)\\
+        This prompt will show up each time you select the "Draw Button". To close it please click the button again or simply start drawing and it will dissapear.
         """)
         brush_width_image = gr.Image(value="../../images/brush_size.png", interactive=False, width=600)
+        
         gr.Markdown("""
-        ### Clearing the Canvas
-        This needs to be done when drawing is not satisfactory or when the previous drawing is still present when the next digit is being requested.
+        ### 4. Clearing the Canvas
+        It is possible to clear the canvas.\\
+        This can be done when the drawing is not satisfactory or when the previous drawing is still present.
         """)
         clear_canvas_image = gr.Image(value="../../images/clear_canvas.png", interactive=False, width=600)
+        
         gr.Markdown("""
-        ### What Will Be Shown
-        - Your drawing as an image
-        - Prediction which includes the predicted digit and the confidence level
-        - Prediction probabilities as a bar plot
-        - Feedback questions to evaluate the model
+        ### 5. Submitting Drawing
+        When done drawing, click "Submit Drawing".\\
+        This will submit your drawing for processing. Please leave the drawing alone once this is done.
         """)
-        # Additional instructions can be added here
+        submit_drawing_image = gr.Image(value="../../images/submit_drawing.png", interactive=False, width=600)
+        
+        gr.Markdown("""
+        ### 6. Prediction Information
+        After submitting your drawing you will be provided with the prediction and relevant information. \\
+        1. Processed drawing: This is your drawing once it has been processed. If you need to refer to your drawing while on this page please refer to this iamge instead of your original drawing. \\
+        2. Prediction: Here you will see the predicted digit and a value for confidence level. These will be needed when answering the questions. \\
+        3. Prediction Plot: A bar plot of all the confidence levels for each possible digit. This will be used to evaluate the alternate predictions of the model.            
+        """)
+        prediction_info_image = gr.Image(value="../../images/prediction_info.png", interactive=False, width=600)
+        
+        gr.Markdown("""
+        ### 7. Accessing Plot
+        As can be seen in the image above the bar plot is hard to see initially.\\
+        Please click the plot once to fix the sizing of it. If done correctly it will then look as follows:
+        """)
+        fixed_plot_image = gr.Image(value="../../images/fixed_plot.png", interactive=False, width=600)
+        
+        gr.Markdown("""
+        ### 8. Questions Section
+        Finally there are three questions to answer.\\
+        Please answer these to the best of your ability. If you have any questions feel free to ask for help.\\
+        The possible answers are as follows:\\
+        - Strongly Disagree: Used when you disagree with the statement with near certainty.\\
+        - Disagree: Used when you disagree with the statement with some uncertainty.\\
+        - Neutral: Used when uncertain of whether you agree or disagree with the statement.\\
+        - Agree: Used when you agree with the statement with some uncertainty.\\
+        - Strongly Agree: Used when you agree with the statement with near certainty.\\
+        """)
+        question_section_image = gr.Image(value="../../images/question_section.png", interactive=False, width=600)
+        
+        gr.Markdown("""
+        ### 9. Next Digit
+        When done answering the questions please click the "Next Digit" button to clear all the results and move to the next digit.
+        """)
+        next_digit_image = gr.Image(value="../../images/next_digit.png", interactive=False, width=600)
+        
+        gr.Markdown("""
+        ### 10. General Information
+        You will be asked to draw each digit twice for a total of 20 drawings.\\
+        If any doubts or questions arise at any moment during the experiment please ask for clarification.\\
+        There are no "correct" ways to draw or answer the questions. Please do your best with the drawings and be as accurate and honest as you can with the questions.\\\\
+        ## Thank you and good luck!
+        """)
+        
         proceed_to_experiment_button = gr.Button("Start Experiment")
 
     # Experiment Page
@@ -93,7 +145,7 @@ with gr.Blocks() as demo:
         original_drawing_display = gr.Image(label="Your Drawing", visible=False)
         processed_drawing_display = gr.Image(label="Processed Drawing (28x28)", visible=False)
         prediction_text = gr.Textbox(label="Prediction", interactive=False, visible=False)
-        probabilities_plot = gr.Gallery(label="Prediction Probabilities", visible=False)
+        probabilities_plot = gr.Gallery(label="Prediction Plot", visible=False)
 
         # Feedback Questions (Likert Scale)
         feedback_instruction = gr.Markdown(
