@@ -6,6 +6,7 @@ import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
 import io
+import re
 
 def parse_prediction_file(file_path):
     data = {}
@@ -34,12 +35,25 @@ def parse_prediction_file(file_path):
             q2_line = lines[idx+2].strip()
             q3_line = lines[idx+3].strip()
 
-            if q1_line.startswith("1."):
-                feedback_data['Question 1'] = q1_line.split("1. Is the top prediction appropriate?")[1].strip()
-            if q2_line.startswith("2."):
-                feedback_data['Question 2'] = q2_line.split("2. Are the alternative predictions appropriate?")[1].strip()
-            if q3_line.startswith("3."):
-                feedback_data['Question 3'] = q3_line.split("3. In relation to how clear the drawing is, is the prediction too confident?")[1].strip()
+            # Use regex to extract the answers
+            q1_match = re.match(r"1\.\s*(.*?)(\?)\s*(.*)", q1_line)
+            q2_match = re.match(r"2\.\s*(.*?)(\?)\s*(.*)", q2_line)
+            q3_match = re.match(r"3\.\s*(.*?)(\?)\s*(.*)", q3_line)
+
+            if q1_match:
+                feedback_data['Question 1'] = q1_match.group(3).strip()
+            else:
+                feedback_data['Question 1'] = "N/A"
+
+            if q2_match:
+                feedback_data['Question 2'] = q2_match.group(3).strip()
+            else:
+                feedback_data['Question 2'] = "N/A"
+
+            if q3_match:
+                feedback_data['Question 3'] = q3_match.group(3).strip()
+            else:
+                feedback_data['Question 3'] = "N/A"
 
             data['Feedback'] = feedback_data
             break  # Exit after parsing feedback
@@ -160,6 +174,7 @@ def main():
 
     # Display options
     st.sidebar.title("Display Options")
+    show_experiment_results = st.sidebar.checkbox("Show Experiment Results", value=True)
     show_original_drawing = st.sidebar.checkbox("Show Original Drawing", value=True)
     show_processed_drawing = st.sidebar.checkbox("Show Processed Image", value=True)
     show_probability_plot = st.sidebar.checkbox("Show Probability Plot", value=True)
@@ -169,10 +184,10 @@ def main():
     # Summary statistics options
     st.sidebar.title("Summary Statistics Options")
     show_avg_conf_per_model = st.sidebar.checkbox("Average Confidence per Model", value=True)
-    show_conf_by_feedback = st.sidebar.checkbox("Confidence by Feedback Answer", value=False)
-    show_confidence_distribution = st.sidebar.checkbox("Confidence Distribution", value=False)
-    show_accuracy_by_feedback = st.sidebar.checkbox("Prediction Accuracy by Feedback Answer", value=False)
-    show_correlation = st.sidebar.checkbox("Correlation Analysis", value=False)
+    show_conf_by_feedback = st.sidebar.checkbox("Confidence by Feedback Answer", value=True)
+    show_confidence_distribution = st.sidebar.checkbox("Confidence Distribution", value=True)
+    show_accuracy_by_feedback = st.sidebar.checkbox("Prediction Accuracy by Feedback Answer", value=True)
+    show_correlation = st.sidebar.checkbox("Correlation Analysis", value=True)
 
     # Filter the DataFrame
     df_filtered = df[
@@ -190,44 +205,45 @@ def main():
         st.write("No data available for the selected filters.")
         return
 
-    # Display data
-    st.header("Experiment Results")
+    # Display Experiment Results
+    if show_experiment_results:
+        st.header("Experiment Results")
 
-    for idx, row in df_filtered.iterrows():
-        st.subheader(f"Subject {row['Subject']} - Digit {row['Digit']} - Draw {row['Draw Number']}")
+        for idx, row in df_filtered.iterrows():
+            st.subheader(f"Subject {row['Subject']} - Digit {row['Digit']} - Draw {row['Draw Number']}")
 
-        cols = st.columns(3)
-        if show_original_drawing and row['Original Drawing'] is not None:
-            with cols[0]:
-                st.image(row['Original Drawing'], caption="Original Drawing", width=150)
-        if show_processed_drawing and row['Processed Drawing'] is not None:
-            with cols[1]:
-                st.image(row['Processed Drawing'], caption="Processed Image", width=150)
-        if show_probability_plot and row['Probability Plot'] is not None:
-            with cols[2]:
-                st.image(row['Probability Plot'], caption="Probability Plot", use_container_width=True)
+            cols = st.columns(3)
+            if show_original_drawing and row['Original Drawing'] is not None:
+                with cols[0]:
+                    st.image(row['Original Drawing'], caption="Original Drawing", width=150)
+            if show_processed_drawing and row['Processed Drawing'] is not None:
+                with cols[1]:
+                    st.image(row['Processed Drawing'], caption="Processed Image", width=150)
+            if show_probability_plot and row['Probability Plot'] is not None:
+                with cols[2]:
+                    st.image(row['Probability Plot'], caption="Probability Plot", use_container_width=True)
 
-        if show_prediction_data:
-            st.write(f"**Intended Digit:** {row.get('Intended Digit', 'N/A')}")
-            st.write(f"**Model Used:** {row.get('Model Used', 'N/A')}")
-            st.write(f"**Predicted Digit:** {row.get('Predicted Digit', 'N/A')}")
-            confidence = row.get('Confidence', None)
-            if confidence is not None:
-                st.write(f"**Confidence:** {confidence:.2f}%")
-            else:
-                st.write("**Confidence:** N/A")
+            if show_prediction_data:
+                st.write(f"**Intended Digit:** {row.get('Intended Digit', 'N/A')}")
+                st.write(f"**Model Used:** {row.get('Model Used', 'N/A')}")
+                st.write(f"**Predicted Digit:** {row.get('Predicted Digit', 'N/A')}")
+                confidence = row.get('Confidence', None)
+                if confidence is not None:
+                    st.write(f"**Confidence:** {confidence:.2f}%")
+                else:
+                    st.write("**Confidence:** N/A")
 
-        if show_feedback:
-            feedback = row.get('Feedback', {})
-            if feedback:
-                st.write("**Feedback Answers:**")
-                st.write(f"1. Is the top prediction appropriate? **{feedback.get('Question 1', 'N/A')}**")
-                st.write(f"2. Are the alternative predictions appropriate? **{feedback.get('Question 2', 'N/A')}**")
-                st.write(f"3. Is the prediction too confident? **{feedback.get('Question 3', 'N/A')}**")
-            else:
-                st.write("**No feedback provided.**")
+            if show_feedback:
+                feedback = row.get('Feedback', {})
+                if feedback:
+                    st.write("**Feedback Answers:**")
+                    st.write(f"1. Is the top prediction appropriate? **{feedback.get('Question 1', 'N/A')}**")
+                    st.write(f"2. Are the alternative predictions appropriate? **{feedback.get('Question 2', 'N/A')}**")
+                    st.write(f"3. Is the prediction too confident? **{feedback.get('Question 3', 'N/A')}**")
+                else:
+                    st.write("**No feedback provided.**")
 
-        st.markdown("---")
+            st.markdown("---")
 
     # Summary Statistics
     st.header("Summary Statistics")
