@@ -1,5 +1,3 @@
-# config.py
-
 # Paths
 BASE_RESULTS_DIR = "../../exp_results/"
 TRAINED_MODELS_DIR = "../../trained_models/"
@@ -11,5 +9,5 @@ ENSEMBLE_MODEL_PREFIX = f"{TRAINED_MODELS_DIR}ensemble_model"
 ENSEMBLE_SIZE = 5
 
 # Experiment Settings
-MAX_DRAW_PER_DIGIT = 2  # Number of times each digit is drawn
+MAX_DRAW_PER_DIGIT = 1  # Number of times each digit is drawn
 TOTAL_DIGITS = 10        # Digits from 0 to 9

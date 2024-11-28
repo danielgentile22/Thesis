@@ -64,8 +64,15 @@ def plot_probabilities(probabilities, model_name, content_options):
 
     digits = list(range(10))
     probabilities = probabilities.flatten()
+
+    # Find the index of the highest probability
+    max_index = np.argmax(probabilities)
+
+    # Set colors: highest probability in one color, others in another color
+    colors = ['skyblue' if i != max_index else 'orange' for i in range(len(probabilities))]
+
     plt.figure(figsize=(6, 4))
-    bars = plt.bar(digits, probabilities, color='skyblue')
+    bars = plt.bar(digits, probabilities, color=colors)
     plt.xlabel("Digit")
     plt.ylabel("Probability")
 

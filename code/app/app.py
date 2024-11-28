@@ -1,5 +1,3 @@
-# app.py
-
 import gradio as gr
 from interface import (
     process_drawing,
@@ -65,15 +63,15 @@ with gr.Blocks() as demo:
         gr.Markdown("""
         ### 2. How to Start Drawing
         Move to the canvas and start your drawing.\\
-        Press the "Draw Button" to begin drawing.\\
+        The pen tool will be selected by default.\\
         Please use as much of the canvas as possible without altering the way you would want to draw the requested digit.
         """)
         drawing_instructions_image = gr.Image(value="../../images/draw_button.png", interactive=False, width=600)
         
         gr.Markdown("""
-        ### 3. Adjusting Brush Width
-        Leave the color choice as is (red) and adjust to around 25% (this only needs to be done at the start)\\
-        This prompt will show up each time you select the "Draw Button". To close it please click the button again or simply start drawing and it will dissapear.
+        ### 3. Brush Width
+        The brush width is set to an appropriate size by default.\\
+        You do not need to adjust it unless you wish to.
         """)
         brush_width_image = gr.Image(value="../../images/brush_size.png", interactive=False, width=600)
         
@@ -94,7 +92,7 @@ with gr.Blocks() as demo:
         gr.Markdown("""
         ### 6. Prediction Information
         After submitting your drawing you will be provided with the prediction and relevant information. \\
-        1. Processed drawing: This is your drawing once it has been processed. If you need to refer to your drawing while on this page please refer to this iamge instead of your original drawing. \\
+        1. Processed drawing: This is your drawing once it has been processed. If you need to refer to your drawing while on this page please refer to this image instead of your original drawing. \\
         2. Prediction: Here you will see the predicted digit and a value for confidence level. These will be needed when answering the questions. \\
         3. Prediction Plot: A bar plot of all the confidence levels for each possible digit. This will be used to evaluate the alternate predictions of the model.            
         """)
@@ -109,7 +107,7 @@ with gr.Blocks() as demo:
         
         gr.Markdown("""
         ### 8. Questions Section
-        Finally there are three questions to answer.\\
+        Finally there are five questions to answer.\\
         Please answer these to the best of your ability. If you have any questions feel free to ask for help.\\
         The possible answers are as follows:\\
         - Strongly Disagree: Used when you disagree with the statement with near certainty.\\
@@ -117,6 +115,7 @@ with gr.Blocks() as demo:
         - Neutral: Used when uncertain of whether you agree or disagree with the statement.\\
         - Agree: Used when you agree with the statement with some uncertainty.\\
         - Strongly Agree: Used when you agree with the statement with near certainty.\\
+        - Can't Answer: Used when you cannot answer the question.
         """)
         question_section_image = gr.Image(value="../../images/question_section.png", interactive=False, width=600)
         
@@ -128,7 +127,7 @@ with gr.Blocks() as demo:
         
         gr.Markdown("""
         ### 10. General Information
-        You will be asked to draw each digit twice for a total of 20 drawings.\\
+        You will be asked to draw each digit once for a total of 10 drawings after 3 practice runs.\\
         If any doubts or questions arise at any moment during the experiment please ask for clarification.\\
         There are no "correct" ways to draw or answer the questions. Please do your best with the drawings and be as accurate and honest as you can with the questions.\\\\
         ## Thank you and good luck!
@@ -138,8 +137,26 @@ with gr.Blocks() as demo:
 
     # Experiment Page
     with gr.Column(visible=False) as experiment_page_container:
-        instruction_text = gr.Textbox(label="Instructions", interactive=False)
-        drawing = gr.ImageEditor(label="Draw a Digit", height=400, width=400)
+        with gr.Row():
+            instruction_text = gr.Textbox(label="Instructions", interactive=False)
+            progress_text = gr.Markdown(value="", visible=True)
+        # Create a Brush instance with desired settings
+        custom_brush = gr.Brush(
+            default_size=25,        # Set the default brush size to 25 pixels
+            colors=["black"],       # Only allow black color for the brush
+            default_color="black",  # Set the default color to black
+            color_mode="fixed"      # Fix the color to only the ones specified in `colors`
+        )
+        # Use gr.ImageEditor with the brush parameter
+        drawing = gr.ImageEditor(
+            label="Draw a Digit",
+            height=600,                 # Set canvas height
+            width=800,                  # Set canvas width
+            canvas_size=[1500, 1000],   # Set drawable area size
+            sources=(),                 # Hide image features
+            show_download_button=False, # Hide download button
+            brush=custom_brush,         # Set custom brush settings
+        )
         submit_drawing_button = gr.Button("Submit Drawing")
         # Content boxes that can be included or excluded
         original_drawing_display = gr.Image(label="Your Drawing", visible=False)
@@ -152,21 +169,37 @@ with gr.Blocks() as demo:
             "Evaluate the model with some sympathy. At times it will make mistakes if not too confident or it might be uncertain about a correct prediction if it is a difficult one. Please answer the following questions with this in mind.",
             visible=False
         )
+
+        # Updated choices with "Can't answer"
+        likert_choices = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree", "Can't answer"]
+
         q1 = gr.Radio(
-            choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
+            choices=likert_choices,
             label="1. Is the top prediction appropriate?",
             interactive=False,
             visible=False
         )
         q2 = gr.Radio(
-            choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
-            label="2. Are the alternative predictions appropriate?",
+            choices=likert_choices,
+            label="2. Is the top prediction's confidence appropriate?",
             interactive=False,
             visible=False
         )
         q3 = gr.Radio(
-            choices=["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"],
-            label="3. In relation to how clear the drawing is, is the prediction too confident?",
+            choices=likert_choices,
+            label="3. Are the alternative predictions appropriate?",
+            interactive=False,
+            visible=False
+        )
+        q4 = gr.Radio(
+            choices=likert_choices,
+            label="4. Are the alternative predictions' confidence appropriate?",
+            interactive=False,
+            visible=False
+        )
+        q5 = gr.Radio(
+            choices=likert_choices,
+            label="5. In relation to how clear the drawing is, is the prediction too confident?",
             interactive=False,
             visible=False
         )
@@ -195,6 +228,8 @@ with gr.Blocks() as demo:
             q1,
             q2,
             q3,
+            q4,
+            q5,
         ]
     )
 
@@ -214,7 +249,8 @@ with gr.Blocks() as demo:
         outputs=[
             instructions_page_container,
             experiment_page_container,
-            instruction_text
+            instruction_text,
+            progress_text
         ]
     )
 
@@ -235,9 +271,12 @@ with gr.Blocks() as demo:
             prediction_text,              # Update prediction_text
             probabilities_plot,           # Display probabilities_plot(s)
             instruction_text,             # Keep instruction_text
+            progress_text,                # Update progress_text
             q1,                           # Enable q1
             q2,                           # Enable q2
             q3,                           # Enable q3
+            q4,                           # Enable q4
+            q5,                           # Enable q5
             next_digit_button             # Enable next_digit_button
         ]
     )
@@ -249,6 +288,8 @@ with gr.Blocks() as demo:
             q1,
             q2,
             q3,
+            q4,
+            q5,
             subject_num
         ],
         outputs=[
@@ -258,14 +299,17 @@ with gr.Blocks() as demo:
             prediction_text,            # Clear prediction_text
             probabilities_plot,         # Clear probabilities_plot
             instruction_text,           # Update instruction_text
+            progress_text,              # Update progress_text
             q1,                         # Clear and disable q1
             q2,                         # Clear and disable q2
             q3,                         # Clear and disable q3
+            q4,                         # Clear and disable q4
+            q5,                         # Clear and disable q5
             next_digit_button,          # Disable next_digit_button
             experiment_page_container,  # Show/hide experiment page
             thank_you_page_container    # Show/hide thank you page
         ]
     )
 
-demo.launch(share=True)
-# demo.launch()
+# Launch the Gradio app
+demo.launch(server_name="145.90.176.189", server_port=7860)

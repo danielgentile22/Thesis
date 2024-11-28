@@ -29,19 +29,28 @@ uncertainty_models = {
 }
 
 # Global variables to track the experiment state
+practice_digits_to_draw = []
+practice_current_index = 0
 digits_to_draw = []
 current_index = 0
+is_practice = True
 
 # Global variable to store content options
 content_options_global = []
+subject_num = None  # Initialize subject_num
 
 def initialize_experiment_state():
     """Initialize and shuffle the list of digits to draw."""
-    global digits_to_draw, current_index
-    # Create a list with two instances of each digit (0-9)
-    digits_to_draw = [digit for digit in range(TOTAL_DIGITS) for _ in range(MAX_DRAW_PER_DIGIT)]
+    global practice_digits_to_draw, practice_current_index, digits_to_draw, current_index, is_practice
+    # Create a list with three random digits for practice
+    practice_digits_to_draw = random.sample(range(TOTAL_DIGITS), 3)
+    practice_current_index = 0
+    # Create a list with one instance of each digit (0-9)
+    digits_to_draw = list(range(TOTAL_DIGITS))
     random.shuffle(digits_to_draw)
     current_index = 0
+    is_practice = True  # Flag to indicate if we are in practice runs
+    print(f"Practice digits to draw: {practice_digits_to_draw}")
     print(f"Digits to draw (shuffled): {digits_to_draw}")
 
 def handle_drawing_input(drawing):
@@ -89,77 +98,95 @@ def generate_error_response(error_message):
         error_message if "Prediction Text" in content_options_global else gr.update(visible=False),           # prediction_text
         None if "Probabilities Plot" in content_options_global else gr.update(visible=False),                 # probabilities_plot
         gr.update(),                # instruction_text
+        gr.update(),                # progress_text
         gr.update(),                # q1
         gr.update(),                # q2
         gr.update(),                # q3
+        gr.update(),                # q4
+        gr.update(),                # q5
         gr.update(interactive=False)  # next_digit_button
     ]
     return tuple(outputs)
 
 def process_drawing(
     drawing,
-    subject_num,
+    subject_num_input,
     uncertainty_methods,
     model_selection_mode,
     content_options
 ):
-    global digits_to_draw, current_index, content_options_global
+    global digits_to_draw, current_index, practice_digits_to_draw, practice_current_index, is_practice, content_options_global, subject_num
     content_options_global = content_options  # Store content options globally
+    subject_num = subject_num_input  # Store subject number globally
 
-    if current_index >= len(digits_to_draw):
-        # All digits have been drawn; reset the experiment state
-        print("All digits have been drawn. Experiment completed.")
-        reset_experiment_state()
-        # Hide experiment page and show thank you page
-        return end_experiment_response()
-
-    current_digit = digits_to_draw[current_index]
-    print(f"Processing drawing for digit {current_digit} (Index: {current_index})")
-
-    # Create directories for saving results
-    subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
-    digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
-    os.makedirs(digit_folder, exist_ok=True)
-    draw_number = len([name for name in os.listdir(digit_folder) if os.path.isdir(os.path.join(digit_folder, name))]) + 1
-    draw_folder = os.path.join(digit_folder, f"draw_{draw_number}")
-    os.makedirs(draw_folder, exist_ok=True)
+    if is_practice:
+        if practice_current_index >= len(practice_digits_to_draw):
+            # End of practice runs
+            is_practice = False
+            current_digit = digits_to_draw[current_index]
+            instruction = f"Please draw the digit {current_digit}"
+            progress = f"{current_index + 1} / {len(digits_to_draw)}"
+            print("Practice runs completed. Proceeding to main experiment.")
+            return continue_experiment_response(instruction, progress)
+        else:
+            current_digit = practice_digits_to_draw[practice_current_index]
+            progress = f"Practice Run {practice_current_index + 1} / {len(practice_digits_to_draw)}"
+            print(f"Processing practice drawing for digit {current_digit} (Practice Index: {practice_current_index})")
+    else:
+        if current_index >= len(digits_to_draw):
+            # All digits have been drawn; reset the experiment state
+            print("All digits have been drawn. Experiment completed.")
+            reset_experiment_state()
+            # Hide experiment page and show thank you page
+            return end_experiment_response()
+        current_digit = digits_to_draw[current_index]
+        progress = f"{current_index + 1} / {len(digits_to_draw)}"
+        print(f"Processing drawing for digit {current_digit} (Index: {current_index})")
 
     # Handle the drawing input
     img = handle_drawing_input(drawing)
     if img is None:
         return generate_error_response("Unsupported image format.")
 
-    # Save the original drawing
-    original_file_path = os.path.join(draw_folder, "original_drawing.png")
-    img.save(original_file_path)
-    print(f"Original drawing saved at {original_file_path}")
-
     # Preprocess the image
     img_array, img_resized = preprocess_image(img)
     if img_array is None or img_resized is None:
         return generate_error_response("Preprocessing failed. Please draw a clearer digit.")
 
-    # Save the preprocessed image
-    processed_file_path = os.path.join(draw_folder, "processed_drawing.png")
-    img_resized.save(processed_file_path)
-    print(f"Processed drawing saved at {processed_file_path}")
-
     # Prepare outputs
     original_display = img.resize((200, 200))
     processed_display = img_resized.resize((200, 200))
 
-    # Initialize variables for predictions
-    prediction_text_output = ""
-    plot_images = []
+    # Create directories for saving results
+    if is_practice:
+        subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}", "Practice")
+    else:
+        subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
+
+    digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
+    os.makedirs(digit_folder, exist_ok=True)
+    draw_number = len([name for name in os.listdir(digit_folder) if os.path.isdir(os.path.join(digit_folder, name))]) + 1
+    draw_folder = os.path.join(digit_folder, f"draw_{draw_number}")
+    os.makedirs(draw_folder, exist_ok=True)
+
+    # Save the original drawing
+    original_file_path = os.path.join(draw_folder, "original_drawing.png")
+    img.save(original_file_path)
+    print(f"Original drawing saved at {original_file_path}")
+
+    # Save the processed drawing
+    processed_file_path = os.path.join(draw_folder, "processed_drawing.png")
+    img_resized.save(processed_file_path)
+    print(f"Processed drawing saved at {processed_file_path}")
 
     # Determine model(s) to use
     if model_selection_mode == "Randomly pick one model per digit":
         prediction_text_output, plot_images = process_single_model(
-            img_array, uncertainty_methods, draw_folder, current_digit
+            img_array, uncertainty_methods, current_digit, draw_folder
         )
     elif model_selection_mode == "Use all models for each digit":
         prediction_text_output, plot_images = process_all_models(
-            img_array, uncertainty_methods, draw_folder, current_digit
+            img_array, uncertainty_methods, current_digit, draw_folder
         )
     else:
         return generate_error_response("Unknown model selection mode.")
@@ -175,6 +202,7 @@ def process_drawing(
         prediction_text_output if "Prediction Text" in content_options else gr.update(visible=False),  # prediction_text
         plot_images if "Probabilities Plot" in content_options else gr.update(visible=False),          # probabilities_plot
         gr.update(),                               # instruction_text remains the same
+        gr.update(value=progress),                 # Update progress_text
     ]
 
     # Handle feedback questions
@@ -183,19 +211,23 @@ def process_drawing(
             gr.update(interactive=True, visible=True),  # Enable q1
             gr.update(interactive=True, visible=True),  # Enable q2
             gr.update(interactive=True, visible=True),  # Enable q3
+            gr.update(interactive=True, visible=True),  # Enable q4
+            gr.update(interactive=True, visible=True),  # Enable q5
         ])
     else:
         outputs.extend([
             gr.update(visible=False),  # Hide q1
             gr.update(visible=False),  # Hide q2
             gr.update(visible=False),  # Hide q3
+            gr.update(visible=False),  # Hide q4
+            gr.update(visible=False),  # Hide q5
         ])
 
     outputs.append(gr.update(interactive=True))  # Enable next_digit_button
 
     return tuple(outputs)
 
-def process_single_model(img_array, uncertainty_methods, draw_folder, current_digit):
+def process_single_model(img_array, uncertainty_methods, current_digit, draw_folder):
     """Process the drawing using a single randomly selected model."""
     model_options = ["Base Model", "MC-Dropout", "Ensemble Model"]
     selected_model_name = random.choice(model_options)
@@ -206,9 +238,9 @@ def process_single_model(img_array, uncertainty_methods, draw_folder, current_di
         selected_model_name, model, img_array
     )
 
-    prediction_file = os.path.join(draw_folder, "prediction.txt")
+    # Save prediction details
     save_prediction(
-        prediction_file, current_digit, selected_model_name, predicted_digit, confidence_value
+        current_digit, selected_model_name, predicted_digit, confidence_value, draw_folder
     )
 
     prediction_text_output = format_prediction_text(
@@ -216,43 +248,43 @@ def process_single_model(img_array, uncertainty_methods, draw_folder, current_di
     )
 
     plot_images = generate_plots(
-        probabilities_for_plot, selected_model_name, uncertainty_methods, draw_folder, content_options_global
+        probabilities_for_plot, selected_model_name, uncertainty_methods, content_options_global, draw_folder
     )
 
     return prediction_text_output, plot_images
 
-def process_all_models(img_array, uncertainty_methods, draw_folder, current_digit):
+def process_all_models(img_array, uncertainty_methods, current_digit, draw_folder):
     """Process the drawing using all available models."""
     models_to_use = ["Base Model", "MC-Dropout", "Ensemble Model"]
     prediction_text_output_list = []
     plot_images = []
 
-    prediction_file = os.path.join(draw_folder, "prediction.txt")
-    with open(prediction_file, 'w') as f:
-        f.write(f"Intended Digit: {current_digit}\n")
-        f.write(f"Models Used: All Models\n")
+    # Save prediction details
+    save_prediction(
+        current_digit, "All Models", None, None, draw_folder
+    )
 
-        for model_name in models_to_use:
-            model = uncertainty_models[model_name]
-            predicted_digit, confidence_value, probabilities_for_plot = predict_model(
-                model_name, model, img_array
-            )
+    for model_name in models_to_use:
+        model = uncertainty_models[model_name]
+        predicted_digit, confidence_value, probabilities_for_plot = predict_model(
+            model_name, model, img_array
+        )
 
-            prediction_text = format_prediction_text(
-                model_name, predicted_digit, confidence_value, uncertainty_methods, content_options_global
-            )
-            prediction_text_output_list.append(prediction_text)
+        prediction_text = format_prediction_text(
+            model_name, predicted_digit, confidence_value, uncertainty_methods, content_options_global
+        )
+        prediction_text_output_list.append(prediction_text)
 
-            # Save to prediction file
-            f.write(f"\n{model_name}:\n")
-            f.write(f"Predicted Digit: {predicted_digit}\n")
-            f.write(f"Confidence: {confidence_value:.2f}%\n")
+        # Generate bar plot if selected
+        plots = generate_plots(
+            probabilities_for_plot, model_name, uncertainty_methods, content_options_global, draw_folder
+        )
+        plot_images.extend(plots)
 
-            # Generate bar plot if selected
-            plots = generate_plots(
-                probabilities_for_plot, model_name, uncertainty_methods, draw_folder, content_options_global
-            )
-            plot_images.extend(plots)
+        # Append prediction details
+        append_prediction(
+            model_name, predicted_digit, confidence_value, draw_folder
+        )
 
     prediction_text_output = "\n\n".join(prediction_text_output_list)
     return prediction_text_output, plot_images
@@ -271,14 +303,29 @@ def predict_model(model_name, model, img_array):
     confidence_value = confidence[0]
     return predicted_digit, confidence_value, probabilities
 
-def save_prediction(prediction_file, intended_digit, model_name, predicted_digit, confidence_value):
+def save_prediction(current_digit, model_name, predicted_digit, confidence_value, draw_folder):
     """Save prediction details to a file."""
+    prediction_file = os.path.join(draw_folder, "prediction.txt")
     with open(prediction_file, 'w') as f:
-        f.write(f"Intended Digit: {intended_digit}\n")
+        f.write(f"Intended Digit: {current_digit}\n")
         f.write(f"Model Used: {model_name}\n")
+        if predicted_digit is not None:
+            f.write(f"Predicted Digit: {predicted_digit}\n")
+            f.write(f"Confidence: {confidence_value:.2f}%\n")
+    print(f"Prediction saved at {prediction_file}")
+
+def append_prediction(model_name, predicted_digit, confidence_value, draw_folder):
+    """Append prediction details to the prediction file."""
+    prediction_file = os.path.join(draw_folder, "prediction.txt")
+    if not os.path.exists(prediction_file):
+        print("No prediction file found.")
+        return
+    # Append to prediction file
+    with open(prediction_file, 'a') as f:
+        f.write(f"\n{model_name}:\n")
         f.write(f"Predicted Digit: {predicted_digit}\n")
         f.write(f"Confidence: {confidence_value:.2f}%\n")
-    print(f"Prediction saved at {prediction_file}")
+    print(f"Prediction appended to {prediction_file}")
 
 def format_prediction_text(model_name, predicted_digit, confidence_value, uncertainty_methods, content_options):
     """Format the prediction text for display."""
@@ -292,7 +339,7 @@ def format_prediction_text(model_name, predicted_digit, confidence_value, uncert
 
     return text
 
-def generate_plots(probabilities, model_name, uncertainty_methods, draw_folder, content_options):
+def generate_plots(probabilities, model_name, uncertainty_methods, content_options, draw_folder):
     """Generate and save plots if required."""
     plot_images = []
     if "Bar Plot" in uncertainty_methods:
@@ -304,47 +351,92 @@ def generate_plots(probabilities, model_name, uncertainty_methods, draw_folder, 
         plot_images.append(plot_image)
     return plot_images
 
-def submit_feedback(q1_answer, q2_answer, q3_answer, subject_num):
+def submit_feedback(q1_answer, q2_answer, q3_answer, q4_answer, q5_answer, subject_num_input):
     """Handle feedback submission and update the experiment state."""
-    global digits_to_draw, current_index
+    global digits_to_draw, current_index, practice_digits_to_draw, practice_current_index, is_practice, subject_num
+    subject_num = subject_num_input
 
-    current_digit = digits_to_draw[current_index]
-    print(f"Submitting feedback for digit {current_digit} (Index: {current_index})")
+    if is_practice:
+        current_digit = practice_digits_to_draw[practice_current_index]
+        print(f"Submitting feedback for practice digit {current_digit} (Practice Index: {practice_current_index})")
+        # Locate the prediction file
+        subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}", "Practice")
+        digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
+        draw_folders = sorted([d for d in os.listdir(digit_folder) if d.startswith("draw_")])
+        if draw_folders:
+            last_draw_folder = draw_folders[-1]
+            prediction_file = os.path.join(digit_folder, last_draw_folder, "prediction.txt")
+        else:
+            print("No prediction file found.")
+            return generate_error_response("No prediction file found.")
 
-    # Locate the prediction file
-    subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
-    digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
-    draw_folders = sorted([d for d in os.listdir(digit_folder) if d.startswith("draw_")])
-    if draw_folders:
-        last_draw_folder = draw_folders[-1]
-        prediction_file = os.path.join(digit_folder, last_draw_folder, "prediction.txt")
+        # Append feedback to prediction file
+        with open(prediction_file, 'a') as f:
+            f.write(f"\nFeedback:\n")
+            f.write(f"1. Is the top prediction appropriate? {q1_answer}\n")
+            f.write(f"2. Is the top prediction's confidence appropriate? {q2_answer}\n")
+            f.write(f"3. Are the alternative predictions appropriate? {q3_answer}\n")
+            f.write(f"4. Are the alternative predictions' confidence appropriate? {q4_answer}\n")
+            f.write(f"5. In relation to how clear the drawing is, is the prediction too confident? {q5_answer}\n")
+        print(f"Feedback saved to {prediction_file}")
+
+        practice_current_index += 1
+        if practice_current_index >= len(practice_digits_to_draw):
+            # End of practice runs
+            is_practice = False
+            current_index = 0  # Start main experiment
+            current_digit = digits_to_draw[current_index]
+            instruction = f"Please draw the digit {current_digit}"
+            progress = f"{current_index + 1} / {len(digits_to_draw)}"
+            print("Practice runs completed. Proceeding to main experiment.")
+            return continue_experiment_response(instruction, progress)
+        else:
+            # Prepare for next practice digit
+            next_digit = practice_digits_to_draw[practice_current_index]
+            instruction = f"Practice Run: Please draw the digit {next_digit}"
+            progress = f"Practice Run {practice_current_index + 1} / {len(practice_digits_to_draw)}"
+            print(f"Instruction updated: {instruction}")
+            return continue_experiment_response(instruction, progress)
     else:
-        print("No prediction file found.")
-        return generate_error_response("No prediction file found.")
+        current_digit = digits_to_draw[current_index]
+        print(f"Submitting feedback for digit {current_digit} (Index: {current_index})")
+        # Locate the prediction file
+        subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
+        digit_folder = os.path.join(subject_folder, f"digit_{current_digit}")
+        draw_folders = sorted([d for d in os.listdir(digit_folder) if d.startswith("draw_")])
+        if draw_folders:
+            last_draw_folder = draw_folders[-1]
+            prediction_file = os.path.join(digit_folder, last_draw_folder, "prediction.txt")
+        else:
+            print("No prediction file found.")
+            return generate_error_response("No prediction file found.")
 
-    # Append feedback to prediction file
-    with open(prediction_file, 'a') as f:
-        f.write(f"\nFeedback:\n")
-        f.write(f"1. Is the top prediction appropriate? {q1_answer}\n")
-        f.write(f"2. Are the alternative predictions appropriate? {q2_answer}\n")
-        f.write(f"3. In relation to how clear the drawing is, is the prediction too confident? {q3_answer}\n")
-    print(f"Feedback saved to {prediction_file}")
+        # Append feedback to prediction file
+        with open(prediction_file, 'a') as f:
+            f.write(f"\nFeedback:\n")
+            f.write(f"1. Is the top prediction appropriate? {q1_answer}\n")
+            f.write(f"2. Is the top prediction's confidence appropriate? {q2_answer}\n")
+            f.write(f"3. Are the alternative predictions appropriate? {q3_answer}\n")
+            f.write(f"4. Are the alternative predictions' confidence appropriate? {q4_answer}\n")
+            f.write(f"5. In relation to how clear the drawing is, is the prediction too confident? {q5_answer}\n")
+        print(f"Feedback saved to {prediction_file}")
 
-    # Move to the next digit
-    current_index += 1
+        # Move to the next digit
+        current_index += 1
 
-    if current_index >= len(digits_to_draw):
-        # All digits have been drawn; reset the experiment state
-        print("All digits have been drawn. Experiment completed.")
-        reset_experiment_state()
-        # Hide experiment page and show thank you page
-        return end_experiment_response()
+        if current_index >= len(digits_to_draw):
+            # All digits have been drawn; reset the experiment state
+            print("All digits have been drawn. Experiment completed.")
+            reset_experiment_state()
+            # Hide experiment page and show thank you page
+            return end_experiment_response()
 
-    # Prepare for next digit
-    next_digit = digits_to_draw[current_index]
-    instruction = f"Please draw the digit {next_digit}"
-    print(f"Instruction updated: {instruction}")
-    return continue_experiment_response(instruction)
+        # Prepare for next digit
+        next_digit = digits_to_draw[current_index]
+        instruction = f"Please draw the digit {next_digit}"
+        progress = f"{current_index + 1} / {len(digits_to_draw)}"
+        print(f"Instruction updated: {instruction}")
+        return continue_experiment_response(instruction, progress)
 
 def reset_experiment_state():
     """Reset the global experiment state."""
@@ -360,16 +452,19 @@ def end_experiment_response():
         "" if "Prediction Text" in content_options_global else gr.update(visible=False),  # Clear prediction_text
         None if "Probabilities Plot" in content_options_global else gr.update(visible=False),  # Clear probabilities_plot
         gr.update(value="Thank you for participating!"),  # Update instruction_text
+        gr.update(value=""),       # Clear progress_text
         gr.update(value=None, interactive=False, visible=False),  # Clear and disable q1
         gr.update(value=None, interactive=False, visible=False),  # Clear and disable q2
         gr.update(value=None, interactive=False, visible=False),  # Clear and disable q3
+        gr.update(value=None, interactive=False, visible=False),  # Clear and disable q4
+        gr.update(value=None, interactive=False, visible=False),  # Clear and disable q5
         gr.update(interactive=False),              # Disable next_digit_button
         gr.update(visible=False),                  # Hide experiment_page_container
         gr.update(visible=True)                    # Show thank_you_page_container
     ]
     return tuple(outputs)
 
-def continue_experiment_response(instruction):
+def continue_experiment_response(instruction, progress):
     """Generate the response to continue the experiment."""
     # Adjust outputs based on content options
     outputs = [
@@ -379,6 +474,7 @@ def continue_experiment_response(instruction):
         "" if "Prediction Text" in content_options_global else gr.update(visible=False),  # Clear prediction_text
         None if "Probabilities Plot" in content_options_global else gr.update(visible=False),  # Clear probabilities_plot
         gr.update(value=instruction),   # Update instruction_text
+        gr.update(value=progress),      # Update progress_text
     ]
 
     # Handle feedback questions
@@ -387,12 +483,16 @@ def continue_experiment_response(instruction):
             gr.update(value=None, interactive=False, visible=True),  # Clear and disable q1
             gr.update(value=None, interactive=False, visible=True),  # Clear and disable q2
             gr.update(value=None, interactive=False, visible=True),  # Clear and disable q3
+            gr.update(value=None, interactive=False, visible=True),  # Clear and disable q4
+            gr.update(value=None, interactive=False, visible=True),  # Clear and disable q5
         ])
     else:
         outputs.extend([
             gr.update(visible=False),  # Hide q1
             gr.update(visible=False),  # Hide q2
             gr.update(visible=False),  # Hide q3
+            gr.update(visible=False),  # Hide q4
+            gr.update(visible=False),  # Hide q5
         ])
 
     outputs.append(gr.update(interactive=False))  # Disable next_digit_button
@@ -402,9 +502,10 @@ def continue_experiment_response(instruction):
     ])
     return tuple(outputs)
 
-def home_page(subject_num, uncertainty_methods, model_selection_mode, content_options):
+def home_page(subject_num_input, uncertainty_methods, model_selection_mode, content_options):
     """Handle the transition from the home page to the consent page."""
-    global content_options_global
+    global content_options_global, subject_num
+    subject_num = subject_num_input
     content_options_global = content_options  # Store content options globally
     print("Proceeding from home page...")
     if not subject_num or len(uncertainty_methods) == 0 or not model_selection_mode:
@@ -423,6 +524,8 @@ def home_page(subject_num, uncertainty_methods, model_selection_mode, content_op
             gr.update(),                # q1
             gr.update(),                # q2
             gr.update(),                # q3
+            gr.update(),                # q4
+            gr.update(),                # q5
         )
     print("Moving to consent page.")
     return (
@@ -432,14 +535,16 @@ def home_page(subject_num, uncertainty_methods, model_selection_mode, content_op
         gr.update(visible=False),  # experiment_page_container remains hidden
         gr.update(visible=False),  # thank_you_page_container remains hidden
         # Update visibility of content boxes
-        gr.update(visible="Your Drawing" in content_options),
-        gr.update(visible="Processed Drawing" in content_options),
-        gr.update(visible="Prediction Text" in content_options),
-        gr.update(visible="Probabilities Plot" in content_options),
-        gr.update(visible="Feedback Questions" in content_options),
-        gr.update(visible="Feedback Questions" in content_options),
-        gr.update(visible="Feedback Questions" in content_options),
-        gr.update(visible="Feedback Questions" in content_options),
+        gr.update(visible="Your Drawing" in content_options),           # original_drawing_display
+        gr.update(visible="Processed Drawing" in content_options),      # processed_drawing_display
+        gr.update(visible="Prediction Text" in content_options),        # prediction_text
+        gr.update(visible="Probabilities Plot" in content_options),     # probabilities_plot
+        gr.update(visible=False),                                       # feedback_instruction (hidden on consent page)
+        gr.update(visible="Feedback Questions" in content_options),     # q1
+        gr.update(visible="Feedback Questions" in content_options),     # q2
+        gr.update(visible="Feedback Questions" in content_options),     # q3
+        gr.update(visible="Feedback Questions" in content_options),     # q4
+        gr.update(visible="Feedback Questions" in content_options),     # q5
     )
 
 def consent_page(agree):
@@ -459,13 +564,20 @@ def consent_page(agree):
 
 def instructions_page():
     """Handle the transition from instructions page to experiment page."""
-    global current_index
+    global current_index, is_practice
     initialize_experiment_state()
-    current_digit = digits_to_draw[current_index]
-    instruction = f"Please draw the digit {current_digit}"
+    if is_practice:
+        current_digit = practice_digits_to_draw[practice_current_index]
+        instruction = f"Practice Run: Please draw the digit {current_digit}"
+        progress = f"Practice Run {practice_current_index + 1} / {len(practice_digits_to_draw)}"
+    else:
+        current_digit = digits_to_draw[current_index]
+        instruction = f"Please draw the digit {current_digit}"
+        progress = f"{current_index + 1} / {len(digits_to_draw)}"
     print("Starting experiment.")
     return (
         gr.update(visible=False),  # Hide instructions page
         gr.update(visible=True),   # Show experiment page
-        gr.update(value=instruction)
+        gr.update(value=instruction),
+        gr.update(value=progress)
     )
