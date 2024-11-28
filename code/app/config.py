@@ -21,9 +21,9 @@ BRUSH_COLORS = ["black"]
 BRUSH_DEFAULT_COLOR = "black"
 BRUSH_COLOR_MODE = "fixed"
 
-CANVAS_HEIGHT = 600
+CANVAS_HEIGHT = 700
 CANVAS_WIDTH = 800
-CANVAS_SIZE = [1500, 1000]
+CANVAS_SIZE = [1600, 1200]
 
 # Image Processing Settings
 IMAGE_SIZE = (28, 28)     # Image size for preprocessing
