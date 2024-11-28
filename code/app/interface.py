@@ -14,7 +14,12 @@ from models import (
     predict_with_ensemble,
 )
 from utils import preprocess_image, plot_probabilities
-from config import BASE_RESULTS_DIR, MAX_DRAW_PER_DIGIT, TOTAL_DIGITS
+from config import (
+    BASE_RESULTS_DIR,
+    MAX_DRAW_PER_DIGIT,
+    TOTAL_DIGITS,
+    NUM_PRACTICE_DIGITS
+)
 
 # Load the models
 base_model = load_base_model()
@@ -43,7 +48,7 @@ def initialize_experiment_state():
     """Initialize and shuffle the list of digits to draw."""
     global practice_digits_to_draw, practice_current_index, digits_to_draw, current_index, is_practice
     # Create a list with three random digits for practice
-    practice_digits_to_draw = random.sample(range(TOTAL_DIGITS), 3)
+    practice_digits_to_draw = random.sample(range(TOTAL_DIGITS), NUM_PRACTICE_DIGITS)
     practice_current_index = 0
     # Create a list with one instance of each digit (0-9)
     digits_to_draw = list(range(TOTAL_DIGITS))

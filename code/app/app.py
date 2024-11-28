@@ -8,7 +8,16 @@ from interface import (
     consent_page,
     instructions_page,
 )
-from config import MAX_DRAW_PER_DIGIT
+from config import (
+    MAX_DRAW_PER_DIGIT,
+    BRUSH_DEFAULT_SIZE,
+    BRUSH_COLORS,
+    BRUSH_DEFAULT_COLOR,
+    BRUSH_COLOR_MODE,
+    CANVAS_HEIGHT,
+    CANVAS_WIDTH,
+    CANVAS_SIZE
+)
 
 # Set up the Gradio interface
 with gr.Blocks() as demo:
@@ -134,7 +143,6 @@ with gr.Blocks() as demo:
         There are no "correct" ways to draw or answer the questions. Please do your best with the drawings and be as accurate and honest as you can with the questions.\\\\
         ## Thank you and good luck!
         """)
-        
         proceed_to_experiment_button = gr.Button("Start Experiment")
 
     # Experiment Page
@@ -144,20 +152,20 @@ with gr.Blocks() as demo:
             progress_text = gr.Markdown(value="", visible=True)
         # Create a Brush instance with desired settings
         custom_brush = gr.Brush(
-            default_size=25,        # Set the default brush size to 25 pixels
-            colors=["black"],       # Only allow black color for the brush
-            default_color="black",  # Set the default color to black
-            color_mode="fixed"      # Fix the color to only the ones specified in `colors`
+            default_size=BRUSH_DEFAULT_SIZE,      # Use constant from config.py
+            colors=BRUSH_COLORS,                  # Use constant from config.py
+            default_color=BRUSH_DEFAULT_COLOR,    # Use constant from config.py
+            color_mode=BRUSH_COLOR_MODE           # Use constant from config.py
         )
         # Use gr.ImageEditor with the brush parameter
         drawing = gr.ImageEditor(
             label="Draw a Digit",
-            height=600,                 # Set canvas height
-            width=800,                  # Set canvas width
-            canvas_size=[1500, 1000],   # Set drawable area size
-            sources=(),                 # Hide image features
-            show_download_button=False, # Hide download button
-            brush=custom_brush,         # Set custom brush settings
+            height=CANVAS_HEIGHT,         # Use constant from config.py
+            width=CANVAS_WIDTH,           # Use constant from config.py
+            canvas_size=CANVAS_SIZE,      # Use constant from config.py
+            sources=(),                   # Hide image features
+            show_download_button=False,   # Hide download button
+            brush=custom_brush,           # Set custom brush settings
         )
         submit_drawing_button = gr.Button("Submit Drawing")
         # Content boxes that can be included or excluded
@@ -211,6 +219,7 @@ with gr.Blocks() as demo:
     with gr.Column(visible=False) as thank_you_page_container:
         gr.Markdown("Thank you for participating in the experiment!")
 
+    # Event Handlers
     # Home Page Button Click
     proceed_button.click(
         home_page,

@@ -4,11 +4,11 @@ from PIL import Image, ImageOps
 import numpy as np
 import io
 import matplotlib.pyplot as plt
+from config import IMAGE_SIZE, IMAGE_THRESHOLD
 
 def preprocess_image(img):
     """
-    Preprocess the image: convert to grayscale and scale to 28x28
-    without resizing, centering, or aspect ratio adjustments.
+    Preprocess the image: convert to grayscale and resize.
 
     Args:
         img (PIL.Image): The PIL Image to preprocess.
@@ -17,7 +17,7 @@ def preprocess_image(img):
         tuple: A tuple containing the preprocessed image array and resized PIL Image.
     """
     print("Preprocessing image...")
-
+    
     # If image has alpha channel, composite onto white background
     if img.mode in ('RGBA', 'LA'):
         print("Image has alpha channel, compositing onto white background.")
@@ -31,19 +31,18 @@ def preprocess_image(img):
     # Invert image so that the digit is white on black background
     img = ImageOps.invert(img)
 
-    # Resize to 28x28 without centering
-    img = img.resize((28, 28), Image.LANCZOS)
+    # Resize to IMAGE_SIZE
+    img = img.resize(IMAGE_SIZE, Image.LANCZOS)
 
     # Convert to numpy array
     img_array = np.array(img)
 
     # Apply a threshold to binarize the image
-    threshold = 20
-    img_array = np.where(img_array > threshold, 255, 0).astype(np.uint8)
+    img_array = np.where(img_array > IMAGE_THRESHOLD, 255, 0).astype(np.uint8)
 
     # Normalize image for model input
     img_array = img_array.astype(np.float32) / 255.0
-    img_array = img_array.reshape(1, 28, 28, 1)
+    img_array = img_array.reshape(1, IMAGE_SIZE[0], IMAGE_SIZE[1], 1)
     print("Image preprocessing completed.")
     return img_array, img
 

@@ -4,12 +4,12 @@ import os
 import numpy as np
 import tensorflow as tf
 from keras.models import load_model
-
-# Configuration variables for model paths
-BASE_MODEL_PATH = "../../trained_models/base_model.keras"
-MC_DROPOUT_MODEL_PATH = "../../trained_models/dropout_model.keras"
-ENSEMBLE_MODEL_PREFIX = "../../trained_models/ensemble_model"
-ENSEMBLE_SIZE = 5
+from config import (
+    BASE_MODEL_PATH,
+    MC_DROPOUT_MODEL_PATH,
+    ENSEMBLE_MODEL_PREFIX,
+    ENSEMBLE_SIZE
+)
 
 def load_base_model(model_path=BASE_MODEL_PATH):
     """Load the base CNN model."""
