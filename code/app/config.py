@@ -1,3 +1,5 @@
+# config.py
+
 # Paths
 BASE_RESULTS_DIR = "../../exp_results/"
 TRAINED_MODELS_DIR = "../../trained_models/"
