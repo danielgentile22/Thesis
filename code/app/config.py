@@ -16,7 +16,7 @@ TOTAL_DIGITS = 10         # Digits from 0 to 9
 NUM_PRACTICE_DIGITS = 2   # Number of practice digits
 
 # Brush and Canvas Settings
-BRUSH_DEFAULT_SIZE = 50
+BRUSH_DEFAULT_SIZE = 40
 BRUSH_COLORS = ["black"]
 BRUSH_DEFAULT_COLOR = "black"
 BRUSH_COLOR_MODE = "fixed"
