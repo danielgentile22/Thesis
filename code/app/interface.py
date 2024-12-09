@@ -516,6 +516,5 @@ def home_page(subject_num_input, subject_name_input, uncertainty_methods, model_
         gr.update(visible="Feedback Questions" in content_options),
         gr.update(visible="Feedback Questions" in content_options),
         gr.update(visible="Feedback Questions" in content_options),
-        gr.update(),
         gr.update()
     )
