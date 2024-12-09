@@ -1,0 +1,4 @@
+Intended Digit: 7
+Model Used: Ensemble Model
+Predicted Digit: 7
+Confidence: 86.62%
