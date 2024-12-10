@@ -1,0 +1,11 @@
+Intended Digit: 7
+Model Used: MC-Dropout
+Predicted Digit: 4
+Confidence: 35.33%
+
+Feedback:
+1. Is the top prediction appropriate? Disagree
+2. Is the top prediction's confidence appropriate? Disagree
+3. Are the alternative predictions appropriate? Disagree
+4. Are the alternative predictions' confidence appropriate? Disagree
+5. In relation to how clear the drawing is, is the prediction too confident? Disagree

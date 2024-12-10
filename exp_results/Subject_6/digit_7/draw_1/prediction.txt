@@ -1,0 +1,4 @@
+Intended Digit: 7
+Model Used: Base Model
+Predicted Digit: 7
+Confidence: 63.57%
