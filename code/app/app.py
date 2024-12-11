@@ -106,11 +106,11 @@ with gr.Blocks() as demo:
 
         likert_choices = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree", "Can't answer"]
 
-        q1 = gr.Radio(choices=likert_choices, label="1. Top prediction appropriate?", interactive=False, visible=False)
-        q2 = gr.Radio(choices=likert_choices, label="2. Top prediction's confidence appropriate?", interactive=False, visible=False)
-        q3 = gr.Radio(choices=likert_choices, label="3. Alternative predictions appropriate?", interactive=False, visible=False)
-        q4 = gr.Radio(choices=likert_choices, label="4. Alternative predictions' confidence appropriate?", interactive=False, visible=False)
-        q5 = gr.Radio(choices=likert_choices, label="5. Too confident for clarity?", interactive=False, visible=False)
+        q1 = gr.Radio(choices=likert_choices, label="1. Is the top prediction appropriate?", interactive=False, visible=False)
+        q2 = gr.Radio(choices=likert_choices, label="2. Is the top prediction's confidence appropriate?", interactive=False, visible=False)
+        q3 = gr.Radio(choices=likert_choices, label="3. Are the alternative predictions appropriate?", interactive=False, visible=False)
+        q4 = gr.Radio(choices=likert_choices, label="4. Are the alternative predictions' confidences appropriate?", interactive=False, visible=False)
+        q5 = gr.Radio(choices=likert_choices, label="5. In relation to how clear the drawing is, is the prediction too confident?", interactive=False, visible=False)
 
         next_digit_button = gr.Button("Next Digit", interactive=False)
 

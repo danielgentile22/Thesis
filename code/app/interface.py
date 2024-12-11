@@ -254,11 +254,11 @@ def process_drawing(drawing, subject_num_input, uncertainty_methods, model_selec
 
     original_file_path = os.path.join(draw_folder, "original_drawing.png")
     img.save(original_file_path)
-    log(state, f"Original drawing saved at {original_file_path}")
+    log(state, f"Drawing saved.")
 
     processed_file_path = os.path.join(draw_folder, "processed_drawing.png")
     img_resized.save(processed_file_path)
-    log(state, f"Processed drawing saved at {processed_file_path}")
+    log(state, f"Image saved.")
 
     if model_selection_mode == "Randomly pick one model per digit":
         prediction_text_output, plot_images = process_single_model(img_array, uncertainty_methods, current_digit, draw_folder, state)
