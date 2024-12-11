@@ -1,5 +1,3 @@
-# utils.py
-
 from PIL import Image, ImageOps
 import numpy as np
 import io
@@ -16,11 +14,8 @@ def preprocess_image(img):
     Returns:
         tuple: A tuple containing the preprocessed image array and resized PIL Image.
     """
-    print("Preprocessing image...")
-    
     # If image has alpha channel, composite onto white background
     if img.mode in ('RGBA', 'LA'):
-        print("Image has alpha channel, compositing onto white background.")
         background = Image.new('RGBA', img.size, (255, 255, 255, 255))
         img = Image.alpha_composite(background, img.convert('RGBA'))
         img = img.convert('RGB')
@@ -43,7 +38,6 @@ def preprocess_image(img):
     # Normalize image for model input
     img_array = img_array.astype(np.float32) / 255.0
     img_array = img_array.reshape(1, IMAGE_SIZE[0], IMAGE_SIZE[1], 1)
-    print("Image preprocessing completed.")
     return img_array, img
 
 def plot_probabilities(probabilities, model_name, content_options):

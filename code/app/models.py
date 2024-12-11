@@ -1,5 +1,3 @@
-# models.py
-
 import os
 import numpy as np
 import tensorflow as tf
@@ -13,21 +11,18 @@ from config import (
 
 def load_base_model(model_path=BASE_MODEL_PATH):
     """Load the base CNN model."""
-    print("Loading Base model...")
     model = load_model(model_path)
     print("Base model loaded.")
     return model
 
 def load_mc_dropout_model(model_path=MC_DROPOUT_MODEL_PATH):
     """Load the MC-Dropout model."""
-    print("Loading MC-Dropout model...")
     model = load_model(model_path)
     print("MC-Dropout model loaded.")
     return model
 
 def load_ensemble_models(model_path_prefix=ENSEMBLE_MODEL_PREFIX, ensemble_size=ENSEMBLE_SIZE):
     """Load all models in the ensemble."""
-    print("Loading Ensemble models...")
     ensemble = []
     for i in range(ensemble_size):
         model_path = f"{model_path_prefix}_{i+1}.keras"

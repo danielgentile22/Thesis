@@ -1,5 +1,3 @@
-# interface.py
-
 import gradio as gr
 from PIL import Image
 import numpy as np
@@ -19,7 +17,7 @@ from config import (
     NUM_PRACTICE_DIGITS
 )
 
-# Load models once
+# Load models once at startup
 base_model = load_base_model()
 mc_dropout_model = load_mc_dropout_model()
 ensemble_models = load_ensemble_models()
@@ -30,33 +28,51 @@ uncertainty_models = {
     "Ensemble Model": ensemble_models
 }
 
+def log(state, message):
+    subject_num = state.get("subject_num", "UNKNOWN")
+    # Initialize a static variable for remembering the last subject
+    if not hasattr(log, "last_subject"):
+        log.last_subject = None
+
+    # If subject changes, print blank lines for readability
+    if log.last_subject is not None and log.last_subject != subject_num:
+        print("\n\n", end='')  # Print two blank lines before changing subject
+
+    print(f"[Subject {subject_num}] {message}")
+    log.last_subject = subject_num
+
 def initialize_experiment_state(state):
     chosen_digits = state["selected_digits"]
     chosen_digits_int = [int(d) for d in chosen_digits]
 
     if len(chosen_digits_int) == 0:
-        # No digits selected
         state["practice_digits_to_draw"] = []
         state["digits_to_draw"] = []
         state["is_practice"] = False
+        log(state, "No digits selected. Cannot start experiment.")
         return
 
     if state["skip_practice"]:
         state["practice_digits_to_draw"] = []
         state["is_practice"] = False
+        log(state, "Skipping practice runs as requested.")
     else:
-        # Shuffle and select practice digits
         random.shuffle(chosen_digits_int)
         practice = chosen_digits_int[:min(NUM_PRACTICE_DIGITS, len(chosen_digits_int))]
         state["practice_digits_to_draw"] = practice
         state["is_practice"] = len(practice) > 0
+        if practice:
+            log(state, f"Practice digits to draw: {practice}")
+        else:
+            log(state, "No practice digits chosen.")
 
-    # Main digits
     digits_main = chosen_digits_int.copy()
     random.shuffle(digits_main)
     state["digits_to_draw"] = digits_main
     state["practice_current_index"] = 0
     state["current_index"] = 0
+
+    log(state, f"Main digits to draw (shuffled): {digits_main}")
 
 def handle_drawing_input(drawing):
     if isinstance(drawing, dict):
@@ -75,14 +91,15 @@ def handle_drawing_input(drawing):
 
 def generate_error_response(error_message, state):
     content_options = state["content_options"]
+    log(state, f"Error encountered: {error_message}")
     return (
         gr.update(value=None),
         None if "Your Drawing" in content_options else gr.update(visible=False),
         None if "Processed Drawing" in content_options else gr.update(visible=False),
         error_message if "Prediction Text" in content_options else gr.update(visible=False),
         None if "Probabilities Plot" in content_options else gr.update(visible=False),
-        gr.update(), # instruction_text unchanged
-        gr.update(), # progress_text unchanged
+        gr.update(),
+        gr.update(),
         gr.update(value=None, visible=False, interactive=False),
         gr.update(value=None, visible=False, interactive=False),
         gr.update(value=None, visible=False, interactive=False),
@@ -97,9 +114,12 @@ def home_page(subject_num_input, subject_name_input, uncertainty_methods, model_
     state["content_options"] = content_options
     state["skip_practice"] = skip_practice
     state["selected_digits"] = selected_digits
+    state["uncertainty_methods"] = uncertainty_methods
+    state["model_selection_mode"] = model_selection_mode
+
+    log(state, "Proceeding from home page...")
 
     subject_num = state["subject_num"]
-
     subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
     os.makedirs(subject_folder, exist_ok=True)
     subject_info_file = os.path.join(subject_folder, 'subject_info.txt')
@@ -107,8 +127,10 @@ def home_page(subject_num_input, subject_name_input, uncertainty_methods, model_
         f.write(f"Subject Number: {subject_num}\n")
         f.write(f"Name: {subject_name_input}\n")
 
+    log(state, f"Subject information saved at {subject_info_file}")
+
     if not subject_num or len(uncertainty_methods) == 0 or not model_selection_mode:
-        # Missing required fields
+        log(state, "Required information not provided. Returning to home page.")
         return (
             gr.update(),
             gr.update(visible=False),
@@ -127,13 +149,10 @@ def home_page(subject_num_input, subject_name_input, uncertainty_methods, model_
             gr.update(value=state)
         )
 
-    state["uncertainty_methods"] = uncertainty_methods
-    state["model_selection_mode"] = model_selection_mode
-
     initialize_experiment_state(state)
 
-    # No digits selected scenario
     if len(state["digits_to_draw"]) == 0 and not state["is_practice"]:
+        # No digits to draw at all
         return (
             gr.update(visible=False),
             gr.update(visible=False),
@@ -152,20 +171,23 @@ def home_page(subject_num_input, subject_name_input, uncertainty_methods, model_
             gr.update(value=state)
         )
 
-    # Determine initial instructions and progress
     if state["is_practice"] and len(state["practice_digits_to_draw"]) > 0:
         current_digit = state["practice_digits_to_draw"][state["practice_current_index"]]
         instruction = f"Practice Run: Please draw the digit {current_digit}"
         progress = f"Practice Run {state['practice_current_index'] + 1} / {len(state['practice_digits_to_draw'])}"
+        log(state, f"Starting with practice run for digit {current_digit}")
     else:
+        # No practice or skip practice
         if state["current_index"] < len(state["digits_to_draw"]):
             current_digit = state["digits_to_draw"][state["current_index"]]
             instruction = f"Please draw the digit {current_digit}"
             progress = f"{state['current_index'] + 1} / {len(state['digits_to_draw'])}"
+            log(state, f"Starting main experiment with digit {current_digit}")
         else:
             instruction = "No digits to draw."
             progress = ""
 
+    log(state, "Starting experiment immediately.")
     return (
         gr.update(visible=False),
         gr.update(visible=True),
@@ -185,9 +207,6 @@ def home_page(subject_num_input, subject_name_input, uncertainty_methods, model_
     )
 
 def process_drawing(drawing, subject_num_input, uncertainty_methods, model_selection_mode, content_options, state):
-    content_options_global = state["content_options"]
-    subject_num = state["subject_num"]
-
     is_practice = state["is_practice"]
     practice_digits_to_draw = state["practice_digits_to_draw"]
     practice_current_index = state["practice_current_index"]
@@ -197,18 +216,21 @@ def process_drawing(drawing, subject_num_input, uncertainty_methods, model_selec
     # Determine current digit
     if is_practice:
         if practice_current_index >= len(practice_digits_to_draw):
-            # Move to main experiment
             state["is_practice"] = False
             if current_index >= len(digits_to_draw):
+                log(state, "All practice done and no main digits. Ending experiment.")
                 return end_experiment_response(state)
             current_digit = digits_to_draw[current_index]
+            log(state, "Practice runs completed. Proceeding to main experiment.")
         else:
             current_digit = practice_digits_to_draw[practice_current_index]
+            log(state, f"Processing practice drawing for digit {current_digit} (Practice Index: {practice_current_index})")
     else:
         if current_index >= len(digits_to_draw):
-            # All done
+            log(state, "All digits have been drawn. Experiment completed.")
             return end_experiment_response(state)
         current_digit = digits_to_draw[current_index]
+        log(state, f"Processing drawing for digit {current_digit} (Index: {current_index})")
 
     img = handle_drawing_input(drawing)
     if img is None:
@@ -218,7 +240,7 @@ def process_drawing(drawing, subject_num_input, uncertainty_methods, model_selec
     if img_array is None or img_resized is None:
         return generate_error_response("Preprocessing failed. Please draw a clearer digit.", state)
 
-    # Save drawings
+    subject_num = state["subject_num"]
     if is_practice:
         subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}", "Practice")
     else:
@@ -233,11 +255,12 @@ def process_drawing(drawing, subject_num_input, uncertainty_methods, model_selec
 
     original_file_path = os.path.join(draw_folder, "original_drawing.png")
     img.save(original_file_path)
+    log(state, f"Original drawing saved at {original_file_path}")
 
     processed_file_path = os.path.join(draw_folder, "processed_drawing.png")
     img_resized.save(processed_file_path)
+    log(state, f"Processed drawing saved at {processed_file_path}")
 
-    # Predictions
     if model_selection_mode == "Randomly pick one model per digit":
         prediction_text_output, plot_images = process_single_model(img_array, uncertainty_methods, current_digit, draw_folder, state)
     else:
@@ -246,7 +269,7 @@ def process_drawing(drawing, subject_num_input, uncertainty_methods, model_selec
     original_display = img.resize((200, 200))
     processed_display = img_resized.resize((200, 200))
 
-    # Do not change instructions or progress here, just return updates
+    content_options_global = state["content_options"]
     outputs = [
         gr.update(value=None), # Clear drawing after submission
         original_display if "Your Drawing" in content_options_global else gr.update(visible=False),
@@ -258,15 +281,9 @@ def process_drawing(drawing, subject_num_input, uncertainty_methods, model_selec
     ]
 
     if "Feedback Questions" in content_options_global:
-        outputs.extend([
-            gr.update(interactive=True, visible=True),
-            gr.update(interactive=True, visible=True),
-            gr.update(interactive=True, visible=True),
-            gr.update(interactive=True, visible=True),
-            gr.update(interactive=True, visible=True),
-        ])
+        outputs.extend([gr.update(interactive=True, visible=True) for _ in range(5)])
     else:
-        outputs.extend([gr.update(visible=False)]*5)
+        outputs.extend([gr.update(visible=False) for _ in range(5)])
 
     outputs.append(gr.update(interactive=True))
     outputs.append(state)
@@ -276,19 +293,21 @@ def process_single_model(img_array, uncertainty_methods, current_digit, draw_fol
     model_options = ["Base Model", "MC-Dropout", "Ensemble Model"]
     selected_model_name = random.choice(model_options)
     model = uncertainty_models[selected_model_name]
+    log(state, f"Selected model: {selected_model_name}")
 
     predicted_digit, confidence_value, probabilities_for_plot = predict_model(selected_model_name, model, img_array)
     save_prediction(current_digit, selected_model_name, predicted_digit, confidence_value, draw_folder)
     prediction_text_output = format_prediction_text(selected_model_name, predicted_digit, confidence_value, uncertainty_methods, state["content_options"])
     plot_images = generate_plots(probabilities_for_plot, selected_model_name, uncertainty_methods, state["content_options"], draw_folder)
-
     return prediction_text_output, plot_images
 
 def process_all_models(img_array, uncertainty_methods, current_digit, draw_folder, state):
     models_to_use = ["Base Model", "MC-Dropout", "Ensemble Model"]
     prediction_text_output_list = []
     plot_images = []
+
     save_prediction(current_digit, "All Models", None, None, draw_folder)
+    log(state, f"Using all models for digit {current_digit}")
 
     for model_name in models_to_use:
         model = uncertainty_models[model_name]
@@ -302,12 +321,14 @@ def process_all_models(img_array, uncertainty_methods, current_digit, draw_folde
     return "\n\n".join(prediction_text_output_list), plot_images
 
 def predict_model(model_name, model, img_array):
+    predicted_labels, confidence, probabilities = None, None, None
     if model_name == "Base Model":
         predicted_labels, confidence, probabilities = predict_with_base_model(model, img_array)
     elif model_name == "MC-Dropout":
         predicted_labels, confidence, probabilities = predict_with_mc_dropout(model, img_array)
     else:
         predicted_labels, confidence, probabilities = predict_with_ensemble(model, img_array)
+
     return int(predicted_labels[0]), confidence[0], probabilities
 
 def save_prediction(current_digit, model_name, predicted_digit, confidence_value, draw_folder):
@@ -346,21 +367,23 @@ def submit_feedback(q1_answer, q2_answer, q3_answer, q4_answer, q5_answer, subje
     practice_current_index = state["practice_current_index"]
     digits_to_draw = state["digits_to_draw"]
     current_index = state["current_index"]
-    content_options = state["content_options"]
     subject_num = state["subject_num"]
 
     if is_practice:
-        # If practice finished
         if practice_current_index >= len(practice_digits_to_draw):
-            # Move to main
             state["is_practice"] = False
-
         current_digit = practice_digits_to_draw[practice_current_index] if practice_current_index < len(practice_digits_to_draw) else None
-        subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}", "Practice")
+        if current_digit is not None:
+            log(state, f"Submitting feedback for practice digit {current_digit} (Practice Index: {practice_current_index})")
+            subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}", "Practice")
+        else:
+            subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}", "Practice")
     else:
         if current_index >= len(digits_to_draw):
+            log(state, "All digits have been drawn. Ending experiment after feedback.")
             return end_experiment_response(state)
         current_digit = digits_to_draw[current_index]
+        log(state, f"Submitting feedback for digit {current_digit} (Index: {current_index})")
         subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
 
     if current_digit is not None:
@@ -382,13 +405,13 @@ def submit_feedback(q1_answer, q2_answer, q3_answer, q4_answer, q5_answer, subje
     if is_practice:
         state["practice_current_index"] += 1
         if state["practice_current_index"] >= len(practice_digits_to_draw):
-            # Move to main
             state["is_practice"] = False
             state["current_index"] = 0
             if state["current_index"] < len(digits_to_draw):
                 next_digit = digits_to_draw[state["current_index"]]
                 instruction = f"Please draw the digit {next_digit}"
                 progress = f"{state['current_index'] + 1} / {len(digits_to_draw)}"
+                log(state, "Practice runs completed. Proceeding to main experiment.")
                 return continue_experiment_response(instruction, progress, state)
             else:
                 return end_experiment_response(state)
@@ -396,19 +419,23 @@ def submit_feedback(q1_answer, q2_answer, q3_answer, q4_answer, q5_answer, subje
             next_digit = practice_digits_to_draw[state["practice_current_index"]]
             instruction = f"Practice Run: Please draw the digit {next_digit}"
             progress = f"Practice Run {state['practice_current_index'] + 1} / {len(practice_digits_to_draw)}"
+            log(state, f"Instruction updated: {instruction}")
             return continue_experiment_response(instruction, progress, state)
     else:
         state["current_index"] += 1
         if state["current_index"] >= len(digits_to_draw):
-            # All digits done
+            log(state, "All digits have been drawn. Experiment completed.")
             return end_experiment_response(state)
+
         next_digit = digits_to_draw[state["current_index"]]
         instruction = f"Please draw the digit {next_digit}"
         progress = f"{state['current_index'] + 1} / {len(digits_to_draw)}"
+        log(state, f"Instruction updated: {instruction}")
         return continue_experiment_response(instruction, progress, state)
 
 def end_experiment_response(state):
     content_options = state["content_options"]
+    log(state, "Ending experiment and showing thank you page.")
     return (
         gr.update(value=None),
         None if "Your Drawing" in content_options else gr.update(visible=False),
@@ -430,8 +457,9 @@ def end_experiment_response(state):
 
 def continue_experiment_response(instruction, progress, state):
     content_options = state["content_options"]
+    log(state, f"Continuing experiment: {instruction}, progress: {progress}")
     return (
-        gr.update(value=None), # Clear drawing for next digit
+        gr.update(value=None),
         None if "Your Drawing" in content_options else gr.update(visible=False),
         None if "Processed Drawing" in content_options else gr.update(visible=False),
         "" if "Prediction Text" in content_options else gr.update(visible=False),

@@ -1,5 +1,3 @@
-# app.py
-
 import gradio as gr
 from interface import (
     process_drawing,
