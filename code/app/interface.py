@@ -55,7 +55,7 @@ def initialize_experiment_state(state):
     if state["skip_practice"]:
         state["practice_digits_to_draw"] = []
         state["is_practice"] = False
-        log(state, "Skipping practice runs as requested.")
+        log(state, "Skipping practice runs.")
     else:
         random.shuffle(chosen_digits_int)
         practice = chosen_digits_int[:min(NUM_PRACTICE_DIGITS, len(chosen_digits_int))]
@@ -72,7 +72,7 @@ def initialize_experiment_state(state):
     state["practice_current_index"] = 0
     state["current_index"] = 0
 
-    log(state, f"Main digits to draw (shuffled): {digits_main}")
+    log(state, f"Digits to draw: {digits_main}")
 
 def handle_drawing_input(drawing):
     if isinstance(drawing, dict):
@@ -117,7 +117,7 @@ def home_page(subject_num_input, subject_name_input, uncertainty_methods, model_
     state["uncertainty_methods"] = uncertainty_methods
     state["model_selection_mode"] = model_selection_mode
 
-    log(state, "Proceeding from home page...")
+    log(state, "Starting experiment...")
 
     subject_num = state["subject_num"]
     subject_folder = os.path.join(BASE_RESULTS_DIR, f"Subject_{subject_num}")
@@ -175,19 +175,18 @@ def home_page(subject_num_input, subject_name_input, uncertainty_methods, model_
         current_digit = state["practice_digits_to_draw"][state["practice_current_index"]]
         instruction = f"Practice Run: Please draw the digit {current_digit}"
         progress = f"Practice Run {state['practice_current_index'] + 1} / {len(state['practice_digits_to_draw'])}"
-        log(state, f"Starting with practice run for digit {current_digit}")
+        log(state, f"Starting practice with digit {current_digit}")
     else:
         # No practice or skip practice
         if state["current_index"] < len(state["digits_to_draw"]):
             current_digit = state["digits_to_draw"][state["current_index"]]
             instruction = f"Please draw the digit {current_digit}"
             progress = f"{state['current_index'] + 1} / {len(state['digits_to_draw'])}"
-            log(state, f"Starting main experiment with digit {current_digit}")
+            log(state, f"Starting main with digit {current_digit}")
         else:
             instruction = "No digits to draw."
             progress = ""
 
-    log(state, "Starting experiment immediately.")
     return (
         gr.update(visible=False),
         gr.update(visible=True),
@@ -419,7 +418,6 @@ def submit_feedback(q1_answer, q2_answer, q3_answer, q4_answer, q5_answer, subje
             next_digit = practice_digits_to_draw[state["practice_current_index"]]
             instruction = f"Practice Run: Please draw the digit {next_digit}"
             progress = f"Practice Run {state['practice_current_index'] + 1} / {len(practice_digits_to_draw)}"
-            log(state, f"Instruction updated: {instruction}")
             return continue_experiment_response(instruction, progress, state)
     else:
         state["current_index"] += 1
@@ -430,7 +428,6 @@ def submit_feedback(q1_answer, q2_answer, q3_answer, q4_answer, q5_answer, subje
         next_digit = digits_to_draw[state["current_index"]]
         instruction = f"Please draw the digit {next_digit}"
         progress = f"{state['current_index'] + 1} / {len(digits_to_draw)}"
-        log(state, f"Instruction updated: {instruction}")
         return continue_experiment_response(instruction, progress, state)
 
 def end_experiment_response(state):

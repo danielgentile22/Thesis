@@ -28,7 +28,7 @@ def load_ensemble_models(model_path_prefix=ENSEMBLE_MODEL_PREFIX, ensemble_size=
         model_path = f"{model_path_prefix}_{i+1}.keras"
         model = load_model(model_path)
         ensemble.append(model)
-    print("Ensemble models loaded.")
+    print("Ensemble models loaded.\n\n")
     return ensemble
 
 def predict_with_base_model(model, x):
