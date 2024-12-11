@@ -4,7 +4,7 @@ import gradio as gr
 from interface import (
     process_drawing,
     submit_feedback,
-    home_page,
+    home_page
 )
 from config import (
     MAX_DRAW_PER_DIGIT,
@@ -17,9 +17,21 @@ from config import (
     CANVAS_SIZE
 )
 
-# Set up the Gradio interface
 with gr.Blocks() as demo:
     gr.Markdown("# Handwritten Digit Recognition with Uncertainty Visualization")
+
+    # Global per-user state
+    session_state = gr.State({
+        "practice_digits_to_draw": [],
+        "practice_current_index": 0,
+        "digits_to_draw": [],
+        "current_index": 0,
+        "is_practice": True,
+        "content_options": [],
+        "subject_num": None,
+        "skip_practice": False,
+        "selected_digits": []
+    })
 
     # Home Page
     with gr.Column(visible=True) as home_page_container:
@@ -28,17 +40,14 @@ with gr.Blocks() as demo:
         uncertainty_methods = gr.CheckboxGroup(
             choices=["Confidence %", "Bar Plot"],
             label="Select Uncertainty Methods",
-            value=["Confidence %", "Bar Plot"]  # Default to both options selected
+            value=["Confidence %", "Bar Plot"]
         )
         model_selection_mode = gr.Radio(
             choices=["Randomly pick one model per digit", "Use all models for each digit"],
             label="Model Selection Mode",
-            value="Randomly pick one model per digit"  # Default value
+            value="Randomly pick one model per digit"
         )
-        # New option to skip practice runs
         skip_practice = gr.Checkbox(label="Skip Practice Runs?", value=False)
-
-        # Options to select which digits to draw
         digit_choices = [str(i) for i in range(10)]
         selected_digits = gr.CheckboxGroup(
             choices=digit_choices,
@@ -46,7 +55,6 @@ with gr.Blocks() as demo:
             value=digit_choices
         )
 
-        # Content options
         content_options = gr.CheckboxGroup(
             choices=[
                 "Your Drawing",
@@ -54,7 +62,7 @@ with gr.Blocks() as demo:
                 "Prediction Text",
                 "Probabilities Plot",
                 "Feedback Questions",
-                "Show Model Name"  # New option added
+                "Show Model Name"
             ],
             label="Select Content to Display",
             value=[
@@ -94,53 +102,27 @@ with gr.Blocks() as demo:
         probabilities_plot = gr.Gallery(label="Prediction Plot", visible=False)
 
         feedback_instruction = gr.Markdown(
-            "Evaluate the model with some sympathy. At times it will make mistakes if not too confident or it might be uncertain about a correct prediction if it is a difficult one. Please answer the following questions with this in mind.",
+            "Evaluate the model with some sympathy...",
             visible=False
         )
 
         likert_choices = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree", "Can't answer"]
 
-        q1 = gr.Radio(
-            choices=likert_choices,
-            label="1. Is the top prediction appropriate?",
-            interactive=False,
-            visible=False
-        )
-        q2 = gr.Radio(
-            choices=likert_choices,
-            label="2. Is the top prediction's confidence appropriate?",
-            interactive=False,
-            visible=False
-        )
-        q3 = gr.Radio(
-            choices=likert_choices,
-            label="3. Are the alternative predictions appropriate?",
-            interactive=False,
-            visible=False
-        )
-        q4 = gr.Radio(
-            choices=likert_choices,
-            label="4. Are the alternative predictions' confidence appropriate?",
-            interactive=False,
-            visible=False
-        )
-        q5 = gr.Radio(
-            choices=likert_choices,
-            label="5. In relation to how clear the drawing is, is the prediction too confident?",
-            interactive=False,
-            visible=False
-        )
+        q1 = gr.Radio(choices=likert_choices, label="1. Top prediction appropriate?", interactive=False, visible=False)
+        q2 = gr.Radio(choices=likert_choices, label="2. Top prediction's confidence appropriate?", interactive=False, visible=False)
+        q3 = gr.Radio(choices=likert_choices, label="3. Alternative predictions appropriate?", interactive=False, visible=False)
+        q4 = gr.Radio(choices=likert_choices, label="4. Alternative predictions' confidence appropriate?", interactive=False, visible=False)
+        q5 = gr.Radio(choices=likert_choices, label="5. Too confident for clarity?", interactive=False, visible=False)
+
         next_digit_button = gr.Button("Next Digit", interactive=False)
 
     # Thank You Page
     with gr.Column(visible=False) as thank_you_page_container:
         gr.Markdown("Thank you for participating in the experiment!")
 
-    # Event Handlers
-    # Home Page Button Click
     proceed_button.click(
         home_page,
-        inputs=[subject_num, subject_name, uncertainty_methods, model_selection_mode, content_options, skip_practice, selected_digits],
+        inputs=[subject_num, subject_name, uncertainty_methods, model_selection_mode, content_options, skip_practice, selected_digits, session_state],
         outputs=[
             home_page_container,
             experiment_page_container,
@@ -156,19 +138,13 @@ with gr.Blocks() as demo:
             q3,
             q4,
             q5,
+            session_state
         ]
     )
 
-    # Submit Drawing Button Click
     submit_drawing_button.click(
         process_drawing,
-        inputs=[
-            drawing,
-            subject_num,
-            uncertainty_methods,
-            model_selection_mode,
-            content_options
-        ],
+        inputs=[drawing, subject_num, uncertainty_methods, model_selection_mode, content_options, session_state],
         outputs=[
             drawing,
             original_drawing_display,
@@ -182,21 +158,14 @@ with gr.Blocks() as demo:
             q3,
             q4,
             q5,
-            next_digit_button
+            next_digit_button,
+            session_state
         ]
     )
 
-    # Next Digit Button Click
     next_digit_button.click(
         submit_feedback,
-        inputs=[
-            q1,
-            q2,
-            q3,
-            q4,
-            q5,
-            subject_num
-        ],
+        inputs=[q1, q2, q3, q4, q5, subject_num, session_state],
         outputs=[
             drawing,
             original_drawing_display,
@@ -212,9 +181,9 @@ with gr.Blocks() as demo:
             q5,
             next_digit_button,
             experiment_page_container,
-            thank_you_page_container
+            thank_you_page_container,
+            session_state
         ]
     )
 
-# Launch the Gradio app
-demo.launch(share=True)
+demo.queue().launch(share=True)
