@@ -100,7 +100,7 @@ with gr.Blocks() as demo:
         probabilities_plot = gr.Gallery(label="Prediction Plot", visible=False)
 
         feedback_instruction = gr.Markdown(
-            "Evaluate the model with some sympathy...",
+            "Evaluate the model with some sympathy. At times it will make mistakes if not too confident or it might be uncertain about a correct prediction if it is a difficult one. Please answer the following questions with this in mind.",
             visible=False
         )
 
