@@ -1,0 +1,11 @@
+Intended Digit: 7
+Model Used: Base Model
+Predicted Digit: 2
+Confidence: 73.86%
+
+Feedback:
+1. Agree
+2. Agree
+3. Agree
+4. Agree
+5. Agree

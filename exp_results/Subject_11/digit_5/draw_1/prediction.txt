@@ -1,0 +1,11 @@
+Intended Digit: 5
+Model Used: MC-Dropout
+Predicted Digit: 5
+Confidence: 75.57%
+
+Feedback:
+1. Strongly agree
+2. Strongly agree
+3. Agree
+4. Agree
+5. Strongly disagree

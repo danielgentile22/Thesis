@@ -1,0 +1,11 @@
+Intended Digit: 0
+Model Used: Ensemble Model
+Predicted Digit: 9
+Confidence: 99.98%
+
+Feedback:
+1. None
+2. None
+3. None
+4. None
+5. None

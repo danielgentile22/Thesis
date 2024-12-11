@@ -1,0 +1,11 @@
+Intended Digit: 4
+Model Used: Base Model
+Predicted Digit: 8
+Confidence: 90.57%
+
+Feedback:
+1. Strongly disagree
+2. Strongly disagree
+3. Agree
+4. Disagree
+5. Strongly agree
