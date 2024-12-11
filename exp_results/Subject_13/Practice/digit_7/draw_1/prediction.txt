@@ -1,0 +1,4 @@
+Intended Digit: 7
+Model Used: MC-Dropout
+Predicted Digit: 7
+Confidence: 89.64%

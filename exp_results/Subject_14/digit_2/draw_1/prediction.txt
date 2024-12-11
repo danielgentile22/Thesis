@@ -1,0 +1,4 @@
+Intended Digit: 2
+Model Used: Ensemble Model
+Predicted Digit: 2
+Confidence: 99.92%

@@ -1,0 +1,11 @@
+Intended Digit: 7
+Model Used: Ensemble Model
+Predicted Digit: 7
+Confidence: 71.73%
+
+Feedback:
+1. Agree
+2. Agree
+3. Disagree
+4. Strongly disagree
+5. Agree

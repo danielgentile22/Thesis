@@ -1,0 +1,11 @@
+Intended Digit: 5
+Model Used: Ensemble Model
+Predicted Digit: 5
+Confidence: 96.05%
+
+Feedback:
+1. Strongly disagree
+2. Strongly disagree
+3. Strongly disagree
+4. Strongly disagree
+5. Strongly disagree

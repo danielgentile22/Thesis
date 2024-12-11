@@ -1,0 +1,11 @@
+Intended Digit: 0
+Model Used: MC-Dropout
+Predicted Digit: 0
+Confidence: 84.20%
+
+Feedback:
+1. Agree
+2. Agree
+3. Disagree
+4. Disagree
+5. Neutral

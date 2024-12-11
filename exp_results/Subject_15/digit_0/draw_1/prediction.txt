@@ -1,0 +1,11 @@
+Intended Digit: 0
+Model Used: Base Model
+Predicted Digit: 2
+Confidence: 58.46%
+
+Feedback:
+1. Strongly disagree
+2. Strongly disagree
+3. Agree
+4. Disagree
+5. Can't answer
