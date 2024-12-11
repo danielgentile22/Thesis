@@ -35,7 +35,18 @@ with gr.Blocks() as demo:
             label="Model Selection Mode",
             value="Randomly pick one model per digit"  # Default value
         )
-        # New options to include/exclude content boxes
+        # New option to skip practice runs
+        skip_practice = gr.Checkbox(label="Skip Practice Runs?", value=False)
+
+        # Options to select which digits to draw
+        digit_choices = [str(i) for i in range(10)]
+        selected_digits = gr.CheckboxGroup(
+            choices=digit_choices,
+            label="Select Which Digits to Draw",
+            value=digit_choices
+        )
+
+        # Content options
         content_options = gr.CheckboxGroup(
             choices=[
                 "Your Drawing",
@@ -60,14 +71,12 @@ with gr.Blocks() as demo:
         with gr.Row():
             instruction_text = gr.Textbox(label="Instructions", interactive=False)
             progress_text = gr.Markdown(value="", visible=True)
-        # Create a Brush instance with desired settings
         custom_brush = gr.Brush(
             default_size=BRUSH_DEFAULT_SIZE,
             colors=BRUSH_COLORS,
             default_color=BRUSH_DEFAULT_COLOR,
             color_mode=BRUSH_COLOR_MODE
         )
-        # Use gr.ImageEditor with the brush parameter
         drawing = gr.ImageEditor(
             label="Draw a Digit",
             height=CANVAS_HEIGHT,
@@ -78,13 +87,12 @@ with gr.Blocks() as demo:
             brush=custom_brush,
         )
         submit_drawing_button = gr.Button("Submit Drawing")
-        # Content boxes that can be included or excluded
+
         original_drawing_display = gr.Image(label="Your Drawing", visible=False)
         processed_drawing_display = gr.Image(label="Processed Drawing (28x28)", visible=False)
         prediction_text = gr.Textbox(label="Prediction", interactive=False, visible=False)
         probabilities_plot = gr.Gallery(label="Prediction Plot", visible=False)
 
-        # Feedback Questions (Likert Scale)
         feedback_instruction = gr.Markdown(
             "Evaluate the model with some sympathy. At times it will make mistakes if not too confident or it might be uncertain about a correct prediction if it is a difficult one. Please answer the following questions with this in mind.",
             visible=False
@@ -132,7 +140,7 @@ with gr.Blocks() as demo:
     # Home Page Button Click
     proceed_button.click(
         home_page,
-        inputs=[subject_num, subject_name, uncertainty_methods, model_selection_mode, content_options],
+        inputs=[subject_num, subject_name, uncertainty_methods, model_selection_mode, content_options, skip_practice, selected_digits],
         outputs=[
             home_page_container,
             experiment_page_container,
@@ -210,4 +218,3 @@ with gr.Blocks() as demo:
 
 # Launch the Gradio app
 demo.launch(share=True)
-# demo.launch(server_name="145.90.176.189", server_port=7860)
