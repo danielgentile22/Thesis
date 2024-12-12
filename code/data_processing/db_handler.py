@@ -61,6 +61,12 @@ def parse_prediction_file(prediction_file_path):
     """
     Parse prediction.txt for intended digit, predictions, and feedback.
     predictions_list will be [(model_name, predicted_digit, confidence), ...]
+    Feedback can now be either:
+    - "1. Is the top prediction appropriate? Strongly agree"
+      (old format with a question and answer)
+    or 
+    - "1. Strongly agree"
+      (new format without the question)
     """
     intended_digit = None
     model_used = None
@@ -110,18 +116,32 @@ def parse_prediction_file(prediction_file_path):
                 temp_predicted_digit = None
                 temp_confidence = None
         elif mode == "feedback":
-            # Parse feedback lines
-            # Example: "1. Is the top prediction appropriate? Strongly agree"
+            # Parse feedback lines in both old and new formats
+            # Old: "1. Is the top prediction appropriate? Strongly agree"
+            # New: "1. Strongly agree"
+            # We'll first check if there's a '?' in the line. If so, split there.
+            # If not, just take everything after the period.
+            def parse_feedback(line):
+                # Attempt to split by '?'
+                parts = line.split('?', 1)
+                if len(parts) == 2:
+                    # Format: "1. Question? Answer"
+                    return parts[1].strip()
+                else:
+                    # Format: "1. Answer"
+                    # Split by '.' and take the remainder
+                    return line.split('.', 1)[1].strip()
+
             if line.startswith("1."):
-                feedback_answers["q1"] = line.split("?")[1].strip()
+                feedback_answers["q1"] = parse_feedback(line)
             elif line.startswith("2."):
-                feedback_answers["q2"] = line.split("?")[1].strip()
+                feedback_answers["q2"] = parse_feedback(line)
             elif line.startswith("3."):
-                feedback_answers["q3"] = line.split("?")[1].strip()
+                feedback_answers["q3"] = parse_feedback(line)
             elif line.startswith("4."):
-                feedback_answers["q4"] = line.split("?")[1].strip()
+                feedback_answers["q4"] = parse_feedback(line)
             elif line.startswith("5."):
-                feedback_answers["q5"] = line.split("?")[1].strip()
+                feedback_answers["q5"] = parse_feedback(line)
 
     return intended_digit, predictions, feedback_answers
 
