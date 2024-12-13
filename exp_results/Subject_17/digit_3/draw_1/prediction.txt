@@ -1,0 +1,11 @@
+Intended Digit: 3
+Model Used: Ensemble Model
+Predicted Digit: 3
+Confidence: 50.41%
+
+Feedback:
+1. Agree
+2. Neutral
+3. Neutral
+4. Agree
+5. Agree

@@ -1,0 +1,11 @@
+Intended Digit: 7
+Model Used: MC-Dropout
+Predicted Digit: 7
+Confidence: 48.51%
+
+Feedback:
+1. Agree
+2. Neutral
+3. Neutral
+4. Disagree
+5. Neutral

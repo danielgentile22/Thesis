@@ -1,0 +1,11 @@
+Intended Digit: 9
+Model Used: Base Model
+Predicted Digit: 9
+Confidence: 67.63%
+
+Feedback:
+1. Agree
+2. Neutral
+3. Disagree
+4. Neutral
+5. Neutral

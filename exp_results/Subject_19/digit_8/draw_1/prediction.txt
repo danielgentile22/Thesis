@@ -1,0 +1,11 @@
+Intended Digit: 8
+Model Used: MC-Dropout
+Predicted Digit: 8
+Confidence: 96.09%
+
+Feedback:
+1. Strongly agree
+2. Strongly agree
+3. Agree
+4. Agree
+5. Disagree

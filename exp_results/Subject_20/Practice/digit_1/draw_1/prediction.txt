@@ -1,0 +1,11 @@
+Intended Digit: 1
+Model Used: Base Model
+Predicted Digit: 7
+Confidence: 40.57%
+
+Feedback:
+1. None
+2. None
+3. None
+4. None
+5. None
