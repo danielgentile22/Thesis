@@ -1,0 +1,1 @@
+ANOVA F-statistic: 8.75, P-value: 0.000
