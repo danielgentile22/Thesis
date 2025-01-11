@@ -6,7 +6,7 @@ import seaborn as sns
 from scipy.stats import ttest_ind, f_oneway
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 
-DB_PATH = "experiment_results.db"
+DB_PATH = "../results_processed/experiment_results.db"
 
 # Load data from SQLite database
 def load_data(db_path):
@@ -20,7 +20,7 @@ data = load_data(DB_PATH)
 
 # Create an output directory
 import os
-OUTPUT_DIR = "analysis_results"
+OUTPUT_DIR = "../data_analysis/analysis_results"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # 1. Accuracy and Model Performance

@@ -1,6 +1,6 @@
 # Paths
-BASE_RESULTS_DIR = "../../exp_results/"
-TRAINED_MODELS_DIR = "../../trained_models/"
+BASE_RESULTS_DIR = "../results_raw/"
+TRAINED_MODELS_DIR = "../trained_models/"
 
 # Model Paths
 BASE_MODEL_PATH = f"{TRAINED_MODELS_DIR}base_model.keras"
