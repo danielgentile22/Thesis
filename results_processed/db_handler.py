@@ -2,7 +2,7 @@ import os
 import sqlite3
 import argparse
 
-BASE_DIR = "../../exp_results"  # Adjust if needed
+BASE_DIR = "../results_raw"
 DB_NAME = "experiment_results.db"
 
 # Parse command-line arguments

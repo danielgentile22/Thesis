@@ -85,7 +85,8 @@ error_analysis(data)
 
 # 5. Subject-wise Variability
 def subject_variability(df):
-    subject_accuracy = df.groupby("subject_number")[["intended_digit", "predicted_digit"]].apply(lambda x: (x["intended_digit"] == x["predicted_digit"]).mean())
+    subject_accuracy = df.groupby("subject_number")[["intended_digit", "predicted_digit"]]
+    subject_accuracy = subject_accuracy.apply(lambda x: (x["intended_digit"] == x["predicted_digit"]).mean())
     subject_accuracy.to_csv(os.path.join(OUTPUT_DIR, "subject_accuracy.csv"))
     subject_accuracy.plot(kind="bar", figsize=(12, 6))
     plt.title("Subject-wise Prediction Accuracy")
@@ -112,7 +113,13 @@ def create_pdf():
     pdf.set_font("Arial", size=12)
     pdf.multi_cell(0, 10, "Accuracy comparison of models based on prediction correctness.")
     pdf.ln(5)
-    pdf.image(os.path.join(OUTPUT_DIR, "model_accuracies.csv"), w=160)
+
+    # Read and add CSV content
+    pdf.set_font("Courier", size=10)
+    with open(os.path.join(OUTPUT_DIR, "model_accuracies.csv"), "r") as f:
+        for line in f:
+            pdf.cell(0, 10, line.strip(), ln=True)
+    pdf.ln(10)
 
     pdf.add_page()
     pdf.set_font("Arial", style="B", size=14)
