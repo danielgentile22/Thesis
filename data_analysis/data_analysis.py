@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from scipy.stats import f_oneway, ttest_ind, spearmanr, chi2_contingency
+from scipy.stats import f_oneway, ttest_ind
+from statsmodels.stats.multitest import multipletests
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from fpdf import FPDF
 import os
@@ -56,11 +57,33 @@ def feedback_summary(df):
 
 feedback_summary(data)
 
-# 3. Confidence Analysis
+# 3. Confidence Analysis with ANOVA and Post-hoc Bonferroni Correction
 def confidence_analysis(df):
     models = df["model_name"].unique()
     confidence_data = [df[df["model_name"] == model]["confidence"].dropna() for model in models]
     f_stat, p_val = f_oneway(*confidence_data)
+    
+    # Perform pairwise comparisons
+    pairwise_pvals = []
+    model_pairs = []
+    for i, model1 in enumerate(models):
+        for j, model2 in enumerate(models):
+            if i < j:
+                model1_data = df[df["model_name"] == model1]["confidence"].dropna()
+                model2_data = df[df["model_name"] == model2]["confidence"].dropna()
+                _, pval = ttest_ind(model1_data, model2_data)
+                pairwise_pvals.append(pval)
+                model_pairs.append((model1, model2))
+
+    # Apply Bonferroni correction
+    _, corrected_pvals, _, _ = multipletests(pairwise_pvals, method="bonferroni")
+    pairwise_results = pd.DataFrame({
+        "Model Pair": model_pairs,
+        "Corrected P-Value": corrected_pvals
+    })
+    pairwise_results.to_csv(os.path.join(OUTPUT_DIR, "pairwise_comparisons.csv"), index=False)
+
+    # Save ANOVA results
     with open(os.path.join(OUTPUT_DIR, "confidence_comparison.txt"), "w") as f:
         f.write(f"ANOVA F-statistic: {f_stat:.2f}, P-value: {p_val:.3f}\n")
     sns.boxplot(x="model_name", y="confidence", data=df)
@@ -144,8 +167,19 @@ def create_pdf():
     pdf.set_font("Arial", style="B", size=14)
     pdf.cell(0, 10, "4. Confidence Analysis", ln=True)
     pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, "Analysis of confidence levels and calibration.")
+    pdf.multi_cell(0, 10, "Analysis of confidence levels with ANOVA and pairwise comparisons.")
     pdf.image(os.path.join(OUTPUT_DIR, "confidence_comparison.png"), w=160)
+    pdf.add_page()
+    pdf.set_font("Courier", size=10)
+    with open(os.path.join(OUTPUT_DIR, "confidence_comparison.txt"), "r") as f:
+        for line in f:
+            pdf.cell(0, 10, line.strip(), ln=True)
+    pdf.add_page()
+    pdf.set_font("Courier", size=10)
+    pdf.cell(0, 10, "Pairwise Comparisons:", ln=True)
+    with open(os.path.join(OUTPUT_DIR, "pairwise_comparisons.csv"), "r") as f:
+        for line in f:
+            pdf.cell(0, 10, line.strip(), ln=True)
 
     pdf.add_page()
     pdf.set_font("Arial", style="B", size=14)

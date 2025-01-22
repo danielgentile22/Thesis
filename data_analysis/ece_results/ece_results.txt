@@ -1,0 +1,2 @@
+ECE for Human-Generated Digits (Practice): 0.0000
+ECE for MNIST Test Data: 0.0024
