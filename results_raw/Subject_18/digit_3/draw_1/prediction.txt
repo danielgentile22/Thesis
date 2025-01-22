@@ -2,3 +2,10 @@ Intended Digit: 3
 Model Used: Base Model
 Predicted Digit: 4
 Confidence: 92.50%
+
+Feedback:
+1. Strongly disagree
+2. Strongly disagree
+3. Strongly disagree
+4. Strongly disagree
+5. Strongly disagree

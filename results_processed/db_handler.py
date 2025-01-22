@@ -24,7 +24,6 @@ cursor.execute("""
 CREATE TABLE IF NOT EXISTS data (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     subject_number TEXT,
-    subject_name TEXT,
     run_type TEXT,
     intended_digit INTEGER,
     q1_answer TEXT,
@@ -42,35 +41,28 @@ CREATE TABLE IF NOT EXISTS data (
 """)
 conn.commit()
 
-def get_subject_info(subject_path):
-    """Read subject_info.txt to get subject number and name."""
+def get_subject_number(subject_path):
+    """Read subject_info.txt to get subject number."""
     info_path = os.path.join(subject_path, 'subject_info.txt')
     subject_number = None
-    subject_name = None
     if os.path.exists(info_path):
         with open(info_path, 'r') as f:
             lines = f.read().strip().split('\n')
             for line in lines:
                 if line.startswith("Subject Number:"):
                     subject_number = line.split(':', 1)[1].strip()
-                elif line.startswith("Name:"):
-                    subject_name = line.split(':', 1)[1].strip()
-    return subject_number, subject_name
+                    # Format single-digit subject numbers as two digits
+                    if len(subject_number) == 1:
+                        subject_number = f"0{subject_number}"
+    return subject_number
 
 def parse_prediction_file(prediction_file_path):
     """
     Parse prediction.txt for intended digit, predictions, and feedback.
-    predictions_list will be [(model_name, predicted_digit, confidence), ...]
-    Feedback can now be either:
-    - "1. Is the top prediction appropriate? Strongly agree"
-      (old format with a question and answer)
-    or 
-    - "1. Strongly agree"
-      (new format without the question)
+    Extracts Q1-Q5 answers and normalizes Likert-scale responses.
     """
     intended_digit = None
-    model_used = None
-    predictions = []  # For multiple models scenario if "All Models" is used
+    predictions = []
     feedback_answers = {"q1": None, "q2": None, "q3": None, "q4": None, "q5": None}
 
     if not os.path.exists(prediction_file_path):
@@ -79,73 +71,53 @@ def parse_prediction_file(prediction_file_path):
     with open(prediction_file_path, 'r') as f:
         lines = [line.strip() for line in f.readlines()]
 
-    mode = "predictions"
-    current_model = None
-    temp_predicted_digit = None
-    temp_confidence = None
+    # Define valid Likert-scale answers
+    likert_scale = {
+        "strongly disagree": "Strongly disagree",
+        "disagree": "Disagree",
+        "neutral": "Neutral",
+        "agree": "Agree",
+        "strongly agree": "Strongly agree",
+        "can't answer": "Can't answer",
+        "other": "Can't answer"
+    }
 
     for line in lines:
+        # Intended Digit
         if line.startswith("Intended Digit:"):
             intended_digit = int(line.split(":", 1)[1].strip())
-        elif line.startswith("Model Used:"):
-            model_used = line.split(":", 1)[1].strip()
-            current_model = model_used
-        elif line.startswith("Predicted Digit:"):
-            temp_predicted_digit = int(line.split(":", 1)[1].strip())
-        elif line.startswith("Confidence:"):
-            conf_str = line.split(":", 1)[1].strip().replace("%", "")
-            temp_confidence = float(conf_str)
-            # If single model, finalize prediction now
-            if model_used != "All Models":
-                predictions.append((current_model, temp_predicted_digit, temp_confidence))
-                temp_predicted_digit = None
-                temp_confidence = None
-        elif line.startswith("Feedback:"):
-            mode = "feedback"
-        elif mode == "predictions" and line.endswith(":") and model_used == "All Models":
-            # This indicates a new model block for "All Models"
-            current_model = line.replace(":", "").strip()
-        elif mode == "predictions" and model_used == "All Models":
-            # If "All Models" mode
-            if line.startswith("Predicted Digit:"):
-                temp_predicted_digit = int(line.split(":", 1)[1].strip())
-            elif line.startswith("Confidence:"):
-                conf_str = line.split(":", 1)[1].strip().replace("%", "")
-                temp_confidence = float(conf_str)
-                predictions.append((current_model, temp_predicted_digit, temp_confidence))
-                temp_predicted_digit = None
-                temp_confidence = None
-        elif mode == "feedback":
-            # Parse feedback lines in both old and new formats
-            # Old: "1. Is the top prediction appropriate? Strongly agree"
-            # New: "1. Strongly agree"
-            # We'll first check if there's a '?' in the line. If so, split there.
-            # If not, just take everything after the period.
-            def parse_feedback(line):
-                # Attempt to split by '?'
-                parts = line.split('?', 1)
-                if len(parts) == 2:
-                    # Format: "1. Question? Answer"
-                    return parts[1].strip()
-                else:
-                    # Format: "1. Answer"
-                    # Split by '.' and take the remainder
-                    return line.split('.', 1)[1].strip()
 
-            if line.startswith("1."):
-                feedback_answers["q1"] = parse_feedback(line)
-            elif line.startswith("2."):
-                feedback_answers["q2"] = parse_feedback(line)
-            elif line.startswith("3."):
-                feedback_answers["q3"] = parse_feedback(line)
-            elif line.startswith("4."):
-                feedback_answers["q4"] = parse_feedback(line)
-            elif line.startswith("5."):
-                feedback_answers["q5"] = parse_feedback(line)
+        # Predictions
+        elif line.startswith("Model Used:"):
+            model_name = line.split(":", 1)[1].strip()
+        elif line.startswith("Predicted Digit:"):
+            predicted_digit = int(line.split(":", 1)[1].strip())
+        elif line.startswith("Confidence:"):
+            confidence = float(line.split(":", 1)[1].strip().replace("%", ""))
+            predictions.append((model_name, predicted_digit, confidence))
+
+        # Feedback (Q1-Q5 answers)
+        elif line.startswith(("1.", "2.", "3.", "4.", "5.")):
+            # Extract question number and answer
+            parts = line.split(".", 1)
+            if len(parts) == 2:
+                question_number = f"q{parts[0].strip()}"
+                raw_feedback = parts[1].strip()
+
+                # Separate the answer from the question (if present)
+                if "?" in raw_feedback:
+                    answer = raw_feedback.split("?", 1)[1].strip()
+                else:
+                    answer = raw_feedback
+
+                # Normalize the answer to match the Likert scale
+                normalized_answer = likert_scale.get(answer.lower(), "Can't answer")
+                feedback_answers[question_number] = normalized_answer
 
     return intended_digit, predictions, feedback_answers
 
 def find_probabilities_plots(draw_folder):
+    """Find probability plots for a given drawing folder."""
     plots = []
     if os.path.isdir(draw_folder):
         for f in os.listdir(draw_folder):
@@ -154,70 +126,55 @@ def find_probabilities_plots(draw_folder):
     return plots
 
 def load_image_as_blob(filepath):
+    """Load an image file as binary data."""
     if filepath and os.path.exists(filepath):
         with open(filepath, 'rb') as f:
             return f.read()
     return None
 
-def insert_data(subject_number, subject_name, run_type, intended_digit, feedback_answers, predictions_list, original_path, processed_path, plots):
-    # Apply digit filter if specified
+def check_duplicates(subject_number, run_type, intended_digit):
+    """Check if the data already exists in the database to avoid duplicates."""
+    cursor.execute("""
+        SELECT COUNT(*) FROM data
+        WHERE subject_number = ? AND run_type = ? AND intended_digit = ?
+    """, (subject_number, run_type, intended_digit))
+    count = cursor.fetchone()[0]
+    return count > 0
+
+def insert_data(subject_number, run_type, intended_digit, feedback_answers, predictions_list, original_path, processed_path, plots):
+    """Insert data into the database."""
     if INCLUDE_ONLY_DIGITS is not None and intended_digit not in INCLUDE_ONLY_DIGITS:
-        return  # Skip insertion if digit not in the allowed list
+        return
 
-    # Insert one row per prediction
-    if predictions_list:
-        for model_name, pred_digit, conf in predictions_list:
-            # Try to find a matching plot for the model (by model name in filename)
-            model_plot_path = None
-            for p in plots:
-                if model_name.replace(" ", "_") in os.path.basename(p):
-                    model_plot_path = p
-                    break
-            # If not found, just pick first plot
-            if model_plot_path is None and plots:
-                model_plot_path = plots[0]
+    if check_duplicates(subject_number, run_type, intended_digit):
+        print(f"Skipping duplicate entry: Subject {subject_number}, Run Type {run_type}, Digit {intended_digit}")
+        return
 
-            # Load images as binary
-            original_blob = load_image_as_blob(original_path)
-            processed_blob = load_image_as_blob(processed_path)
-            plot_blob = load_image_as_blob(model_plot_path)
-
-            cursor.execute("""
-                INSERT INTO data (
-                    subject_number, subject_name, run_type, intended_digit, 
-                    q1_answer, q2_answer, q3_answer, q4_answer, q5_answer,
-                    model_name, predicted_digit, confidence,
-                    original_drawing, processed_drawing, probabilities_plot
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                subject_number, subject_name, run_type, intended_digit,
-                feedback_answers["q1"], feedback_answers["q2"], feedback_answers["q3"], feedback_answers["q4"], feedback_answers["q5"],
-                model_name, pred_digit, conf,
-                original_blob, processed_blob, plot_blob
-            ))
-    else:
-        # If there were no predictions (which would be odd), insert a row with null model info
+    for model_name, predicted_digit, confidence in predictions_list:
         original_blob = load_image_as_blob(original_path)
         processed_blob = load_image_as_blob(processed_path)
-        # No predictions means no plot either
+        plot_blob = None
+        for plot in plots:
+            if model_name.replace(" ", "_") in plot:
+                plot_blob = load_image_as_blob(plot)
+                break
         cursor.execute("""
             INSERT INTO data (
-                subject_number, subject_name, run_type, intended_digit, 
+                subject_number, run_type, intended_digit,
                 q1_answer, q2_answer, q3_answer, q4_answer, q5_answer,
                 model_name, predicted_digit, confidence,
                 original_drawing, processed_drawing, probabilities_plot
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            subject_number, subject_name, run_type, intended_digit,
+            subject_number, run_type, intended_digit,
             feedback_answers["q1"], feedback_answers["q2"], feedback_answers["q3"], feedback_answers["q4"], feedback_answers["q5"],
-            None, None, None,
-            original_blob, processed_blob, None
+            model_name, predicted_digit, confidence,
+            original_blob, processed_blob, plot_blob
         ))
 
-def process_drawings(subject_number, subject_name, run_type, path_to_digits):
-    """Process all digit directories (and their draws) in the given path."""
+def process_drawings(subject_number, run_type, path_to_digits):
+    """Process all digit directories in the given path."""
     if not os.path.isdir(path_to_digits):
         return
     for digit_dir in sorted(os.listdir(path_to_digits)):
@@ -229,29 +186,30 @@ def process_drawings(subject_number, subject_name, run_type, path_to_digits):
                     draw_path = os.path.join(digit_path, draw_dir)
                     prediction_file_path = os.path.join(draw_path, "prediction.txt")
                     intended_digit, predictions_list, feedback_answers = parse_prediction_file(prediction_file_path)
-                    if intended_digit is None:
-                        intended_digit = digit_num
-                    original_path = os.path.join(draw_path, "original_drawing.png") if os.path.exists(os.path.join(draw_path, "original_drawing.png")) else None
-                    processed_path = os.path.join(draw_path, "processed_drawing.png") if os.path.exists(os.path.join(draw_path, "processed_drawing.png")) else None
+                    original_path = os.path.join(draw_path, "original_drawing.png")
+                    processed_path = os.path.join(draw_path, "processed_drawing.png")
                     plots = find_probabilities_plots(draw_path)
-                    insert_data(subject_number, subject_name, run_type, intended_digit, feedback_answers, predictions_list, original_path, processed_path, plots)
+                    insert_data(subject_number, run_type, intended_digit, feedback_answers, predictions_list, original_path, processed_path, plots)
 
 def process_subject(subject_path):
-    subject_number, subject_name = get_subject_info(subject_path)
+    """Process data for a single subject."""
+    subject_number = get_subject_number(subject_path)
     if subject_number is None:
         return
 
-    # If practice data is included, process it
+    if "pilot" in subject_path.lower():
+        print(f"Skipping Pilot folder: {subject_path}")
+        return
+
     if INCLUDE_PRACTICE:
         practice_path = os.path.join(subject_path, "Practice")
-        process_drawings(subject_number, subject_name, "practice", practice_path)
+        process_drawings(subject_number, "practice", practice_path)
 
-    # Main experiment digits
-    process_drawings(subject_number, subject_name, "main", subject_path)
+    process_drawings(subject_number, "main", subject_path)
     conn.commit()
 
 def main():
-    # Find subject directories named "Subject_X"
+    """Main function to process all subjects."""
     for d in os.listdir(BASE_DIR):
         if d.startswith("Subject_"):
             subject_path = os.path.join(BASE_DIR, d)
