@@ -1,0 +1,45 @@
+ANOVA Results for Distribution of Q1 Responses:
+F-statistic: 0.08
+P-value: 0.924
+
+Pairwise Comparisons for Q1:
+  MC-Dropout vs Ensemble Model: Corrected P-value = 1.000
+  MC-Dropout vs Base Model: Corrected P-value = 1.000
+  Ensemble Model vs Base Model: Corrected P-value = 1.000
+
+ANOVA Results for Distribution of Q2 Responses:
+F-statistic: 0.09
+P-value: 0.911
+
+Pairwise Comparisons for Q2:
+  MC-Dropout vs Ensemble Model: Corrected P-value = 1.000
+  MC-Dropout vs Base Model: Corrected P-value = 1.000
+  Ensemble Model vs Base Model: Corrected P-value = 1.000
+
+ANOVA Results for Distribution of Q3 Responses:
+F-statistic: 0.34
+P-value: 0.713
+
+Pairwise Comparisons for Q3:
+  MC-Dropout vs Ensemble Model: Corrected P-value = 1.000
+  MC-Dropout vs Base Model: Corrected P-value = 1.000
+  Ensemble Model vs Base Model: Corrected P-value = 1.000
+
+ANOVA Results for Distribution of Q4 Responses:
+F-statistic: 0.97
+P-value: 0.381
+
+Pairwise Comparisons for Q4:
+  MC-Dropout vs Ensemble Model: Corrected P-value = 1.000
+  MC-Dropout vs Base Model: Corrected P-value = 0.937
+  Ensemble Model vs Base Model: Corrected P-value = 0.612
+
+ANOVA Results for Distribution of Q5 Responses:
+F-statistic: 0.53
+P-value: 0.590
+
+Pairwise Comparisons for Q5:
+  MC-Dropout vs Ensemble Model: Corrected P-value = 0.898
+  MC-Dropout vs Base Model: Corrected P-value = 1.000
+  Ensemble Model vs Base Model: Corrected P-value = 1.000
+
