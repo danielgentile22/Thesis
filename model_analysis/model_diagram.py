@@ -22,7 +22,7 @@ def save_model_diagram(model_path, diagram_filename="model_diagram.png"):
         to_file=diagram_filename, 
         show_shapes=True, 
         show_layer_names=True,
-        rankdir="LR",
+        rankdir="TB",
         dpi=300
     )
     print(f"Saved architecture diagram to {diagram_filename}")
