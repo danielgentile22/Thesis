@@ -17,7 +17,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 def load_data(db_path):
     """Load the main table from your experiment_results SQLite database."""
     conn = sqlite3.connect(db_path)
-    query = "SELECT * FROM data"  # Adjust if your table name or query differs
+    query = "SELECT * FROM data"
     df = pd.read_sql(query, conn)
     conn.close()
     return df
@@ -25,13 +25,6 @@ def load_data(db_path):
 def map_feedback_responses(df):
     """
     Convert string-based Likert responses to numeric values.
-    Example mapping:
-      'Strongly disagree' = 1
-      'Disagree'          = 2
-      'Neutral'           = 3
-      'Agree'             = 4
-      'Strongly agree'    = 5
-      'Can't answer'      = np.nan
     """
     feedback_mapping = {
         "Strongly disagree": 1,
@@ -42,7 +35,6 @@ def map_feedback_responses(df):
         "Can't answer": np.nan
     }
     
-    # Modify these column names if yours are different
     feedback_cols = ["q1_answer", "q2_answer", "q3_answer", "q4_answer", "q5_answer"]
     
     for col in feedback_cols:
