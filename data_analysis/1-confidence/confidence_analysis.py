@@ -11,7 +11,7 @@ from scipy.stats import friedmanchisquare, wilcoxon
 from statsmodels.stats.multitest import multipletests
 
 DB_PATH = "../results_processed/experiment_results.db"
-OUTPUT_DIR = "confidence"
+OUTPUT_DIR = "1-confidence"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 def load_data(db_path):
