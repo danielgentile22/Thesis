@@ -1,0 +1,23 @@
+Likert Scale Analysis Results
+========================================
+
+Question: q1_answer
+  Friedman statistic = 1.156, p-value = 0.56095
+  No significant difference -> No post-hoc tests.
+
+Question: q2_answer
+  Friedman statistic = 1.583, p-value = 0.45309
+  No significant difference -> No post-hoc tests.
+
+Question: q3_answer
+  Friedman statistic = 2.459, p-value = 0.29237
+  No significant difference -> No post-hoc tests.
+
+Question: q4_answer
+  Friedman statistic = 0.704, p-value = 0.70320
+  No significant difference -> No post-hoc tests.
+
+Question: q5_answer
+  Friedman statistic = 5.365, p-value = 0.06839
+  No significant difference -> No post-hoc tests.
+
