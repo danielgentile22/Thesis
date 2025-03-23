@@ -1,0 +1,4 @@
+model,n,BF10,posterior_mu_mean,HDI
+Base Model,20,26.18463288366417,-14.702535466722873,"{'dims': ('hdi',), 'attrs': {}, 'data': [-23.557719725848994, -6.099466263564636], 'coords': {'hdi': {'dims': ('hdi',), 'attrs': {'hdi_prob': 0.94}, 'data': ['lower', 'higher']}}, 'name': 'mu'}"
+Ensemble Model,19,0.3851199397185687,-4.821261354681154,"{'dims': ('hdi',), 'attrs': {}, 'data': [-13.659480762408725, 3.5181692640603948], 'coords': {'hdi': {'dims': ('hdi',), 'attrs': {'hdi_prob': 0.94}, 'data': ['lower', 'higher']}}, 'name': 'mu'}"
+MC-Dropout,20,0.18438014837215205,-0.43297291550782885,"{'dims': ('hdi',), 'attrs': {}, 'data': [-7.3297948923998515, 6.594130661905974], 'coords': {'hdi': {'dims': ('hdi',), 'attrs': {'hdi_prob': 0.94}, 'data': ['lower', 'higher']}}, 'name': 'mu'}"

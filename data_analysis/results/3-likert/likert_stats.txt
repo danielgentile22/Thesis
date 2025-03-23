@@ -1,0 +1,23 @@
+Likert Scale Analysis Results
+========================================
+
+Question: q1_answer
+  Friedman stat: 1.156, p = 0.56095
+  No significant difference.
+
+Question: q2_answer
+  Friedman stat: 1.583, p = 0.45309
+  No significant difference.
+
+Question: q3_answer
+  Friedman stat: 2.459, p = 0.29237
+  No significant difference.
+
+Question: q4_answer
+  Friedman stat: 0.704, p = 0.70320
+  No significant difference.
+
+Question: q5_answer
+  Friedman stat: 5.365, p = 0.06839
+  No significant difference.
+

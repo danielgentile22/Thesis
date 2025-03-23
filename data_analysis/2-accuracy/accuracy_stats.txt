@@ -1,4 +1,0 @@
-Friedman Test for Accuracy:
-Statistic = 0.125, p-value = 0.93941
-
-No significant difference -> No post-hoc tests.

@@ -1,0 +1,5 @@
+Friedman stat: 8.000, p = 0.01832
+                  Comparison  Wilcoxon_p  Bonferroni_p
+Base Model vs Ensemble Model    0.014069      0.042206
+    Base Model vs MC-Dropout    0.002399      0.007198
+Ensemble Model vs MC-Dropout    0.708557      1.000000
