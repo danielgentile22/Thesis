@@ -1,0 +1,24 @@
+Can't Answer Summary:
+==============================
+Participant 01: 0 CAs
+Participant 02: 0 CAs
+Participant 03: 0 CAs
+Participant 04: 0 CAs
+Participant 05: 0 CAs
+Participant 06: 15 CAs
+Participant 07: 0 CAs
+Participant 08: 1 CAs
+Participant 09: 0 CAs
+Participant 10: 0 CAs
+Participant 11: 3 CAs
+Participant 12: 11 CAs
+Participant 13: 6 CAs
+Participant 14: 0 CAs
+Participant 15: 9 CAs
+Participant 16: 0 CAs
+Participant 17: 0 CAs
+Participant 18: 0 CAs
+Participant 19: 0 CAs
+Participant 20: 0 CAs
+
+Total CAs: 45

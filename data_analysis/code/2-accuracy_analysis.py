@@ -92,7 +92,23 @@ def main():
             f.write(post.to_string(index=False))
         else:
             f.write("No significant difference.\n")
+        
+    report_model_accuracies(agg, os.path.join(OUTPUT_DIR, "accuracy_stats.txt"))
+            
     print("Accuracy analysis done. See", OUTPUT_DIR)
+    
+def report_model_accuracies(df, output_path=None):
+    means = df.groupby("model_name")["mean_accuracy"].mean().round(2)
+    output = "\nMean Accuracies by Model:\n"
+    for model, acc in means.items():
+        output += f"{model}: {acc:.2f}%\n"
+
+    print(output.strip())
+
+    if output_path:
+        with open(output_path, "a") as f:
+            f.write(output)
+
 
 if __name__ == "__main__":
     main()

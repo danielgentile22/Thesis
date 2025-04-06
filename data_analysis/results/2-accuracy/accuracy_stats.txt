@@ -1,2 +1,7 @@
 Friedman stat: 0.125, p = 0.93941
 No significant difference.
+
+Mean Accuracies by Model:
+Base Model: 76.25%
+Ensemble Model: 76.65%
+MC-Dropout: 79.08%
