@@ -55,15 +55,15 @@ def boxplot_conf(df, model="model_name", col="mean_confidence"):
     plt.close()
 
 def bar_chart_conf(df, model="model_name", col="mean_confidence"):
-    stats = df.groupby(model)[col].agg(["mean", "sem"]).reset_index()
+    stats = df.groupby(model)[col].agg(["mean", "std"]).reset_index()
     plt.figure(figsize=(8,6))
-    bars = plt.bar(stats[model], stats["mean"], yerr=stats["sem"],
+    bars = plt.bar(stats[model], stats["mean"], yerr=stats["std"],
                    capsize=5, color="skyblue", edgecolor="black")
     for bar, m in zip(bars, stats["mean"]):
-        plt.text(bar.get_x()+bar.get_width()/2, m, f"{m:.2f}", ha="center", va="bottom")
-    plt.title("Average Confidence by Model (Mean ± SEM)")
+        plt.text(bar.get_x() + bar.get_width() / 2, m, f"{m:.2f}", ha="center", va="bottom")
+    plt.title("Average Confidence by Model (Mean ± SD)")
     plt.ylabel("Confidence (%)")
-    plt.ylim(0,100)
+    plt.ylim(0, 100)
     plt.tight_layout()
     plt.savefig(os.path.join(OUTPUT_DIR, "confidence_barchart.png"))
     plt.close()

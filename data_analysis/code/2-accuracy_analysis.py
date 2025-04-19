@@ -60,18 +60,20 @@ def boxplot_acc(df, model="model_name", col="mean_accuracy"):
     plt.close()
 
 def plot_bar_chart(df, model="model_name", col="mean_accuracy"):
-    stats_df = df.groupby(model)[col].agg(["mean", "sem"]).reset_index()
-    plt.figure(figsize=(8,6))
-    bars = plt.bar(stats_df[model],
-                   stats_df["mean"],
-                   yerr=stats_df["sem"],
-                   capsize=5,
-                   color="lightsalmon",
-                   edgecolor="black")
+    stats_df = df.groupby(model)[col].agg(["mean", "std"]).reset_index()
+    plt.figure(figsize=(8, 6))
+    bars = plt.bar(
+        stats_df[model],
+        stats_df["mean"],
+        yerr=stats_df["std"],  # Use SD instead of SEM
+        capsize=5,
+        color="skyblue",
+        edgecolor="black"
+    )
     for bar, m in zip(bars, stats_df["mean"]):
-        # m is already a percentage
-        plt.text(bar.get_x() + bar.get_width()/2, m, f"{m:.1f}%", ha="center", va="bottom")
-    plt.title("Average Accuracy by Model (Mean ± SEM)")
+        plt.text(bar.get_x() + bar.get_width() / 2, m, f"{m:.1f}%", ha="center", va="bottom")
+
+    plt.title("Average Accuracy by Model (Mean ± SD)")
     plt.ylabel("Accuracy (%)")
     plt.ylim(0, 100)
     plt.tight_layout()

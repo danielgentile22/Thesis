@@ -44,6 +44,18 @@ def run_bayes(diff):
     bf10 = prior0 / post0
     return trace, bf10, mu_samples
 
+# find missing subj
+def debug_missing_rows(merged_df, model_name="Ensemble Model"):
+    subset = merged_df[merged_df["model_name"] == model_name]
+    missing = subset[subset[["mean_accuracy", "mean_confidence"]].isnull().any(axis=1)]
+    print("\nMissing accuracy or confidence values for model:", model_name)
+    print(missing[["subject_number", "mean_accuracy", "mean_confidence"]])
+    
+def check_participant_counts(df):
+    print("\nParticipants per model BEFORE aggregation:")
+    model_counts = df.groupby("model_name")["subject_number"].nunique()
+    print(model_counts)
+
 def bayes_test(merged):
     results = []
     for m in merged["model_name"].unique():
@@ -66,6 +78,12 @@ def bayes_test(merged):
             "posterior_mu_mean": np.mean(mu_samples),
             "HDI": az.hdi(trace, var_names=["mu"])["mu"].to_dict()
         })
+        
+    print("\nParticipants per model AFTER merge:")
+    print(merged.groupby("model_name")["subject_number"].nunique())
+
+    debug_missing_rows(merged)
+    
     return results
 
 def main():
